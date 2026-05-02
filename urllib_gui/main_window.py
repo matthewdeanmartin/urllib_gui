@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import time
 import tkinter as tk
 import webbrowser
+from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
@@ -64,6 +66,9 @@ class MainWindow(tk.Tk):
         self.bookmark_store = BookmarkStore()
         self.renderers = built_in_renderers()
         self.tabs_by_id: dict[str, BrowserTab] = {}
+        self.fetch_executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="urllib_gui-fetch")
+        self._spinner_after_id: str | None = None
+        self._spinner_frame = 0
         self.status_var = tk.StringVar(value="Ready")
         self.url_var = tk.StringVar()
         self.view_mode_var = tk.StringVar(value="Rendered")
@@ -89,6 +94,19 @@ class MainWindow(tk.Tk):
         """Return the currently selected browser tab."""
         tab_id = cast(str, self.notebook.select())  # type: ignore[no-untyped-call]
         return self.tabs_by_id[tab_id]
+
+    def destroy(self) -> None:
+        """Shut down the fetch executor before tearing down the window."""
+        # In-flight urllib.request calls cannot be cancelled mid-socket; cancel_futures
+        # only drops queued work. Workers may keep running until the socket times out
+        # or completes, but their results are ignored via the per-tab fetch_seq guard.
+        # TODO: a real cancellation path would require switching to a custom opener
+        # that exposes the underlying socket so we can shutdown(SHUT_RDWR) it.
+        try:
+            self.fetch_executor.shutdown(wait=False, cancel_futures=True)
+        except Exception:  # pylint: disable=broad-except
+            pass
+        super().destroy()
 
     def _build_menu(self) -> None:
         """Build the application menu bar."""
@@ -183,8 +201,12 @@ class MainWindow(tk.Tk):
 
     def _build_statusbar(self) -> None:
         """Build the status bar."""
-        status = ttk.Label(self, textvariable=self.status_var, anchor="w", padding=(8, 4))
-        status.pack(fill="x", side="bottom")
+        status_bar = ttk.Frame(self, padding=(0, 0))
+        status_bar.pack(fill="x", side="bottom")
+        status = ttk.Label(status_bar, textvariable=self.status_var, anchor="w", padding=(8, 4))
+        status.pack(side="left", fill="x", expand=True)
+        self.progress = ttk.Progressbar(status_bar, mode="indeterminate", length=120)
+        self.progress.pack(side="right", padx=(0, 8), pady=4)
 
     def _bind_shortcuts(self) -> None:
         """Bind keyboard shortcuts for common actions."""
@@ -290,7 +312,9 @@ class MainWindow(tk.Tk):
         """Switch the active render engine."""
         tab = self.current_tab
         tab.state.render_engine_name = self.engine_var.get()
+        tab.state.engine_locked = True
         self._render_current_response(tab)
+        self._display_tab(tab)
 
     def refresh_view(self) -> None:
         """Refresh the visible representation of the current tab."""
@@ -401,26 +425,72 @@ class MainWindow(tk.Tk):
         populate()
 
     def _load_request(self, tab: BrowserTab, request: RequestSpec, *, push_history: bool) -> None:
-        """Load a request into a tab and update tab state."""
-        self.status_var.set(f"Loading {request.normalized_url()} ...")
-        self.update_idletasks()
-        response = self.urllib_client.fetch(request)
+        """Load a request into a tab off the UI thread."""
         tab.state.request = request
-        tab.state.response = response
+        tab.state.fetch_seq += 1
+        seq = tab.state.fetch_seq
+        tab.state.loading = True
         if push_history:
             if tab.state.history_index < len(tab.state.local_history) - 1:
                 tab.state.local_history = tab.state.local_history[: tab.state.history_index + 1]
             tab.state.local_history.append(request)
             tab.state.history_index = len(tab.state.local_history) - 1
+        self._begin_loading_indicator(request.normalized_url())
+        client = self.urllib_client
+        started = time.perf_counter()
+        future = self.fetch_executor.submit(client.fetch, request)
+        # Marshal completion back to the Tk thread; the seq guard ignores stale results
+        # from navigations the user has since superseded.
+        def _bounce(fut: Future[ResponseRecord]) -> None:
+            try:
+                self.after(0, self._on_fetch_complete, tab, seq, request, push_history, started, fut)
+            except (RuntimeError, tk.TclError):
+                # Window already torn down; drop the result.
+                pass
+
+        future.add_done_callback(_bounce)
+
+    def _on_fetch_complete(  # pylint: disable=too-many-arguments,too-many-positional-arguments
+        self,
+        tab: BrowserTab,
+        seq: int,
+        request: RequestSpec,
+        push_history: bool,  # pylint: disable=unused-argument
+        started: float,
+        future: Future[ResponseRecord],
+    ) -> None:
+        """Apply a fetch result to a tab, ignoring stale completions."""
+        if seq != tab.state.fetch_seq:
+            # User started a newer navigation in this tab; drop the stale result.
+            # NOTE: the worker thread cannot be cancelled mid-socket, so we just discard.
+            return
+        if str(tab.frame) not in self.tabs_by_id:
+            # Tab was closed while the fetch was in flight.
+            return
+        tab.state.loading = False
+        self._end_loading_indicator()
+        try:
+            response = future.result()
+        except Exception as error:  # pylint: disable=broad-except
+            elapsed = time.perf_counter() - started
+            response = ResponseRecord(
+                final_url=request.normalized_url(),
+                status=None,
+                reason=None,
+                headers=[],
+                body=b"",
+                elapsed_seconds=elapsed,
+                encoding=None,
+                content_type=None,
+                error=f"{type(error).__name__}: {error}",
+            )
+        tab.state.response = response
         if response.error:
             tab.state.source_text = response.error
             tab.state.rendered = self._build_error_document(request, response.error)
         else:
-            default_engine = choose_default_engine_name(response)
-            if tab.state.render_engine_name not in self.renderers or (
-                default_engine == "plain" and tab.state.render_engine_name.startswith("stdlib_html")
-            ):
-                tab.state.render_engine_name = default_engine
+            if not tab.state.engine_locked or tab.state.render_engine_name not in self.renderers:
+                tab.state.render_engine_name = choose_default_engine_name(response)
             source_renderer = self.renderers["html_source"]
             tab.state.source_text = source_renderer.render(
                 response.body,
@@ -431,11 +501,44 @@ class MainWindow(tk.Tk):
             self._render_current_response(tab)
             entry = history_entry_from_response(request, response, title=tab.state.title)
             self.history_store.add_entry(entry)
-        self.url_var.set(response.final_url if response.final_url else request.normalized_url())
+        if tab is self.current_tab:
+            self.url_var.set(response.final_url if response.final_url else request.normalized_url())
         self._display_tab(tab)
         status_code = response.status if response.status is not None else "ERR"
         content_type = response.content_type or "unknown"
         self.status_var.set(f"{status_code} {content_type} in {response.elapsed_seconds:.2f}s")
+
+    def _begin_loading_indicator(self, url: str) -> None:
+        """Start the indeterminate progressbar and an animated status message."""
+        try:
+            self.progress.start(80)
+        except tk.TclError:
+            return
+        self._spinner_frame = 0
+        self._tick_spinner(url)
+
+    def _tick_spinner(self, url: str) -> None:
+        frames = ("   ", ".  ", ".. ", "...")
+        if not any(t.state.loading for t in self.tabs_by_id.values()):
+            return
+        self.status_var.set(f"Loading {url} {frames[self._spinner_frame % len(frames)]}")
+        self._spinner_frame += 1
+        self._spinner_after_id = self.after(200, self._tick_spinner, url)
+
+    def _end_loading_indicator(self) -> None:
+        """Stop the progress animation if no tab is still loading."""
+        if any(t.state.loading for t in self.tabs_by_id.values()):
+            return
+        try:
+            self.progress.stop()
+        except tk.TclError:
+            pass
+        if self._spinner_after_id is not None:
+            try:
+                self.after_cancel(self._spinner_after_id)
+            except tk.TclError:
+                pass
+            self._spinner_after_id = None
 
     def _build_error_document(self, request: RequestSpec, error_text: str) -> RenderedDocument:
         """Build a rendered document for request errors."""

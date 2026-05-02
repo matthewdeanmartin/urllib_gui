@@ -199,9 +199,11 @@ class TabState:
     history_index: int = -1
     local_history: list[RequestSpec] = field(default_factory=list)
     render_engine_name: str = "stdlib_html_links"
+    engine_locked: bool = False
     title: str | None = None
     loading: bool = False
     source_text: str = ""
+    fetch_seq: int = 0
 
 
 def history_entry_from_response(
