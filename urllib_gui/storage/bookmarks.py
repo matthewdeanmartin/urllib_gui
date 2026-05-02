@@ -16,7 +16,7 @@ class BookmarkStore:
 
     def __init__(self, path: Path | None = None) -> None:
         self.path = path or ensure_config_dir() / "bookmarks.sqlite3"
-        self._initialize()
+        self.initialize()
 
     def add(self, bookmark: Bookmark) -> None:
         """Insert or update a bookmark."""
@@ -71,7 +71,7 @@ class BookmarkStore:
             connection.execute("DELETE FROM bookmarks WHERE url = ?", (url,))
             connection.commit()
 
-    def _initialize(self) -> None:
+    def initialize(self) -> None:
         with sqlite3.connect(self.path) as connection:
             connection.execute("""
                 CREATE TABLE IF NOT EXISTS bookmarks (

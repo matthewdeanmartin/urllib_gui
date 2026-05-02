@@ -25,9 +25,7 @@ uv run make check           # everything above together
 
 ## Python conventions
 
-- **`_` means unused, not private.** A leading underscore on a name signals "I'm not using this
-  value" — it does not mean the name is private or internal. Use `__dunder__` for truly special
-  methods and explicit `__all__` in modules that have a public API.
+- **`_` means unused, not private.** Never use a leading underscore on a name to signal "private", "internal", or "friend" visibility. A leading underscore MUST ONLY be used to signal "I'm not using this value". Use `__dunder__` for truly special methods and explicit `__all__` in modules that have a public API. ALL members are public.
 - All new code must have type annotations. The `python-use-type-annotations` pre-commit hook
   enforces this.
 - Docstrings follow **Google style** (pydoctest and interrogate are configured for it).

@@ -36,7 +36,7 @@ class UrllibClient:
 
     def fetch(self, spec: RequestSpec) -> ResponseRecord:
         """Fetch a resource described by *spec*."""
-        opener = self._build_opener(spec)
+        opener = self.build_opener(spec)
         request = urllib.request.Request(
             spec.normalized_url(),
             data=spec.body,
@@ -50,7 +50,7 @@ class UrllibClient:
             response = opener.open(request, timeout=spec.effective_timeout())
         except urllib.error.HTTPError as error:
             elapsed = time.perf_counter() - start
-            return self._record_from_stream(error, elapsed)
+            return self.record_from_stream(error, elapsed)
         except urllib.error.URLError as error:
             elapsed = time.perf_counter() - start
             return ResponseRecord(
@@ -67,9 +67,9 @@ class UrllibClient:
 
         with response:
             elapsed = time.perf_counter() - start
-            return self._record_from_stream(response, elapsed)
+            return self.record_from_stream(response, elapsed)
 
-    def _build_opener(self, spec: RequestSpec) -> urllib.request.OpenerDirector:
+    def build_opener(self, spec: RequestSpec) -> urllib.request.OpenerDirector:
         handlers: list[urllib.request.BaseHandler] = []
         if spec.cookies_enabled:
             handlers.append(urllib.request.HTTPCookieProcessor(self.cookie_jar))
@@ -83,11 +83,11 @@ class UrllibClient:
                 password_manager = urllib.request.HTTPPasswordMgrWithDefaultRealm()
                 password_manager.add_password(None, spec.normalized_url(), username, password)
                 handlers.append(urllib.request.HTTPBasicAuthHandler(password_manager))
-        handlers.append(urllib.request.HTTPSHandler(context=self._ssl_context(spec)))
+        handlers.append(urllib.request.HTTPSHandler(context=self.ssl_context(spec)))
         return urllib.request.build_opener(*handlers)
 
     @staticmethod
-    def _ssl_context(spec: RequestSpec) -> ssl.SSLContext:
+    def ssl_context(spec: RequestSpec) -> ssl.SSLContext:
         """Build the TLS context for a request."""
         if spec.verify_tls:
             return ssl.create_default_context()
@@ -97,7 +97,7 @@ class UrllibClient:
         return context
 
     @staticmethod
-    def _record_from_stream(stream: Any, elapsed: float) -> ResponseRecord:
+    def record_from_stream(stream: Any, elapsed: float) -> ResponseRecord:
         """Build a response record from a urllib response stream."""
         message = stream.info()
         body = stream.read()

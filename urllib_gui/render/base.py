@@ -41,12 +41,12 @@ def choose_default_engine_name(response: ResponseRecord) -> str:
     """Choose the default render engine for a response."""
     if response.content_type and "html" in response.content_type:
         return "stdlib_html_links"
-    if _looks_like_html(response.body):
+    if looks_like_html(response.body):
         return "stdlib_html_links"
     return "plain"
 
 
-def _looks_like_html(body: bytes) -> bool:
+def looks_like_html(body: bytes) -> bool:
     """Sniff the first non-whitespace bytes for an HTML signature."""
     head = body.lstrip()[:512].lower()
     return head.startswith(b"<!doctype html") or head.startswith(b"<html") or b"<html" in head[:256]

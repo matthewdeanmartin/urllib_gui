@@ -15,7 +15,7 @@ class HistoryStore:
 
     def __init__(self, path: Path | None = None) -> None:
         self.path = path or ensure_config_dir() / "history.sqlite3"
-        self._initialize()
+        self.initialize()
 
     def add_entry(self, entry: HistoryEntry) -> None:
         """Store a history entry."""
@@ -69,7 +69,7 @@ class HistoryStore:
             connection.execute("DELETE FROM history")
             connection.commit()
 
-    def _initialize(self) -> None:
+    def initialize(self) -> None:
         with sqlite3.connect(self.path) as connection:
             connection.execute("""
                 CREATE TABLE IF NOT EXISTS history (

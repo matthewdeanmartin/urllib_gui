@@ -37,7 +37,7 @@ BLOCK_ELEMENTS = {
 IGNORED_ELEMENTS = {"audio", "canvas", "embed", "iframe", "noscript", "object", "script", "style", "svg", "video"}
 
 
-class _DocumentBuilder(HTMLParser):
+class DocumentBuilder(HTMLParser):
     """Convert a subset of HTML into readable text and link spans."""
 
     def __init__(self, *, base_url: str, track_links: bool) -> None:
@@ -67,11 +67,11 @@ class _DocumentBuilder(HTMLParser):
         elif self.ignored_depth:
             return
         elif tag == "br":
-            self._ensure_newlines(1)
+            self.ensure_newlines(1)
         elif tag == "hr":
-            self._ensure_newlines(1)
-            self._append_raw("----")
-            self._ensure_newlines(1)
+            self.ensure_newlines(1)
+            self.append_raw("----")
+            self.ensure_newlines(1)
         elif tag in {"p", "div", "section", "article", "main", "header", "footer", "nav", "blockquote"} or tag in {
             "h1",
             "h2",
@@ -80,18 +80,18 @@ class _DocumentBuilder(HTMLParser):
             "h5",
             "h6",
         }:
-            self._ensure_newlines(2)
+            self.ensure_newlines(2)
         elif tag == "pre":
-            self._ensure_newlines(2)
+            self.ensure_newlines(2)
             self.in_pre = True
         elif tag == "ul":
-            self._ensure_newlines(2)
+            self.ensure_newlines(2)
             self.list_stack.append(("ul", 0))
         elif tag == "ol":
-            self._ensure_newlines(2)
+            self.ensure_newlines(2)
             self.list_stack.append(("ol", 0))
         elif tag == "li":
-            self._ensure_newlines(1)
+            self.ensure_newlines(1)
             indent = "  " * max(len(self.list_stack) - 1, 0)
             if self.list_stack:
                 list_type, counter = self.list_stack[-1]
@@ -103,15 +103,15 @@ class _DocumentBuilder(HTMLParser):
                     bullet = "• "
             else:
                 bullet = "• "
-            self._append_raw(f"{indent}{bullet}")
+            self.append_raw(f"{indent}{bullet}")
         elif tag == "a":
             href = attr_map.get("href", "")
             self.active_link_href = urljoin(self.base_url, href)
             self.active_link_title = attr_map.get("title") or None
-            self.active_link_start = self._length
+            self.active_link_start = self.length
             self.active_link_label = []
-        elif tag in {"td", "th"} and self._length and self.output[-1] not in {" ", "\n", "\t"}:
-            self._append_raw("  ")
+        elif tag in {"td", "th"} and self.length and self.output[-1] not in {" ", "\n", "\t"}:
+            self.append_raw("  ")
 
     def handle_endtag(self, tag: str) -> None:
         if tag in IGNORED_ELEMENTS:
@@ -123,17 +123,17 @@ class _DocumentBuilder(HTMLParser):
         if self.ignored_depth:
             return
         if tag == "a":
-            self._finish_link()
+            self.finish_link()
             return
         if tag == "pre":
             self.in_pre = False
-            self._ensure_newlines(2)
+            self.ensure_newlines(2)
             return
         if tag in {"li", "tr"}:
-            self._ensure_newlines(1)
+            self.ensure_newlines(1)
             return
         if tag in BLOCK_ELEMENTS:
-            self._ensure_newlines(2 if tag not in {"li", "tr"} else 1)
+            self.ensure_newlines(2 if tag not in {"li", "tr"} else 1)
         if tag in {"ul", "ol"} and self.list_stack:
             self.list_stack.pop()
 
@@ -144,38 +144,38 @@ class _DocumentBuilder(HTMLParser):
         if self.ignored_depth:
             return
         if self.in_pre:
-            self._append(data)
+            self.append(data)
             return
         for token in re.findall(r"\S+|\s+", data):
             if token.isspace():
-                self._append_space()
+                self.append_space()
             else:
-                self._append(token)
+                self.append(token)
 
     @property
-    def _length(self) -> int:
+    def length(self) -> int:
         return sum(len(part) for part in self.output)
 
-    def _append(self, text: str) -> None:
-        self._append_raw(text)
+    def append(self, text: str) -> None:
+        self.append_raw(text)
         if self.active_link_href:
             self.active_link_label.append(text)
 
-    def _append_raw(self, text: str) -> None:
+    def append_raw(self, text: str) -> None:
         if not text:
             return
         self.output.append(text)
 
-    def _append_space(self) -> None:
+    def append_space(self) -> None:
         if not self.output:
             return
         if self.output[-1].endswith((" ", "\n", "\t")):
             return
-        self._append_raw(" ")
+        self.append_raw(" ")
         if self.active_link_href:
             self.active_link_label.append(" ")
 
-    def _ensure_newlines(self, count: int) -> None:
+    def ensure_newlines(self, count: int) -> None:
         if not self.output:
             return
         while self.output and self.output[-1].endswith(" "):
@@ -194,7 +194,7 @@ class _DocumentBuilder(HTMLParser):
             return
         self.output.append("\n" * (count - current))
 
-    def _finish_link(self) -> None:
+    def finish_link(self) -> None:
         href = self.active_link_href
         start = self.active_link_start
         if href is None or start is None:
@@ -203,7 +203,7 @@ class _DocumentBuilder(HTMLParser):
             self.active_link_start = None
             self.active_link_label = []
             return
-        end = self._length
+        end = self.length
         label = "".join(self.active_link_label).strip() or href
         if self.track_links and end > start:
             self.links.append(
@@ -252,7 +252,7 @@ class _DocumentBuilder(HTMLParser):
         )
 
 
-class _BaseStdlibHtmlRenderer:
+class BaseStdlibHtmlRenderer:
     """Base class for stdlib HTML rendering."""
 
     supports_links = False
@@ -270,7 +270,7 @@ class _BaseStdlibHtmlRenderer:
     ) -> RenderedDocument:
         """Render HTML bytes into a text document."""
         text, used_encoding = decode_bytes(html_bytes, encoding)
-        builder = _DocumentBuilder(base_url=base_url, track_links=self.track_links)
+        builder = DocumentBuilder(base_url=base_url, track_links=self.track_links)
         builder.feed(text)
         builder.close()
         document = builder.finalize()
@@ -286,7 +286,7 @@ class _BaseStdlibHtmlRenderer:
         )
 
 
-class StdlibHtmlTextRenderer(_BaseStdlibHtmlRenderer):
+class StdlibHtmlTextRenderer(BaseStdlibHtmlRenderer):
     """HTML-to-text renderer without clickable links."""
 
     name = "stdlib_html_text"
@@ -295,7 +295,7 @@ class StdlibHtmlTextRenderer(_BaseStdlibHtmlRenderer):
         super().__init__(track_links=False)
 
 
-class StdlibHtmlLinksRenderer(_BaseStdlibHtmlRenderer):
+class StdlibHtmlLinksRenderer(BaseStdlibHtmlRenderer):
     """HTML-to-text renderer that preserves link spans."""
 
     name = "stdlib_html_links"

@@ -50,7 +50,7 @@ class AuthSpec:
         """Build an Authorization header for a supported auth spec."""
         scheme = self.scheme.lower().strip()
         if scheme == "basic" and self.username is not None and self.password is not None:
-            return _basic_auth_header(self.username, self.password)
+            return basic_auth_header(self.username, self.password)
         if scheme == "bearer" and self.token:
             return f"Bearer {self.token}"
         if scheme == "header":
@@ -262,7 +262,7 @@ def make_bookmark(title: str | None, url: str) -> Bookmark:
     return Bookmark(title=title or url, url=url, created_at=utc_now())
 
 
-def _basic_auth_header(username: str, password: str) -> str:
+def basic_auth_header(username: str, password: str) -> str:
     """Return a basic auth header value."""
     token = base64.b64encode(f"{username}:{password}".encode()).decode("ascii")
     return f"Basic {token}"
