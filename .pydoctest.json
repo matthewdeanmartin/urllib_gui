@@ -1,0 +1,5 @@
+{
+    "include_paths": ["urllib_gui/**/*.py"],
+    "fail_on_missing_docstring": false,
+    "parser": "google"
+}
