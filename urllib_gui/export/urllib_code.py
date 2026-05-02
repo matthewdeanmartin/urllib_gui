@@ -9,7 +9,7 @@ from urllib_gui.model import RequestSpec
 
 def generate_urllib_code(spec: RequestSpec) -> str:
     """Generate a Python snippet approximating *spec*."""
-    headers = {name: value for name, value in spec.effective_headers()}
+    headers = dict(spec.effective_headers())
     lines = [
         "import urllib.request",
         "",

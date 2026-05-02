@@ -20,6 +20,7 @@ class HtmlSourceRenderer:
         content_type: str | None = None,
         encoding: str | None = None,
     ) -> RenderedDocument:
+        """Render bytes as unparsed source text."""
         text, used_encoding = decode_bytes(html_bytes, encoding)
         return RenderedDocument(
             title=None,

@@ -86,10 +86,12 @@ class MainWindow(tk.Tk):
 
     @property
     def current_tab(self) -> BrowserTab:
+        """Return the currently selected browser tab."""
         tab_id = cast(str, self.notebook.select())  # type: ignore[no-untyped-call]
         return self.tabs_by_id[tab_id]
 
     def _build_menu(self) -> None:
+        """Build the application menu bar."""
         menu_bar = tk.Menu(self)
 
         file_menu = tk.Menu(menu_bar, tearoff=False)
@@ -149,6 +151,7 @@ class MainWindow(tk.Tk):
         self.config(menu=menu_bar)
 
     def _build_toolbar(self) -> None:
+        """Build the main navigation toolbar."""
         toolbar = ttk.Frame(self, padding=(8, 8))
         toolbar.pack(fill="x")
         ttk.Button(toolbar, text="Back", command=self.go_back).pack(side="left")
@@ -173,15 +176,18 @@ class MainWindow(tk.Tk):
         self.engine_combo.bind("<<ComboboxSelected>>", lambda _event: self.change_engine())
 
     def _build_notebook(self) -> None:
+        """Build the tabbed content area."""
         self.notebook = ttk.Notebook(self)
         self.notebook.pack(fill="both", expand=True)
         self.notebook.bind("<<NotebookTabChanged>>", lambda _event: self._on_tab_changed())
 
     def _build_statusbar(self) -> None:
+        """Build the status bar."""
         status = ttk.Label(self, textvariable=self.status_var, anchor="w", padding=(8, 4))
         status.pack(fill="x", side="bottom")
 
     def _bind_shortcuts(self) -> None:
+        """Bind keyboard shortcuts for common actions."""
         self.bind("<Control-l>", lambda _event: self.focus_url_entry())
         self.bind("<Control-t>", lambda _event: self.new_tab())
         self.bind("<Control-w>", lambda _event: self.close_current_tab())
@@ -192,6 +198,7 @@ class MainWindow(tk.Tk):
         self.bind("<Control-s>", lambda _event: self.save_response_body())
 
     def _apply_theme(self) -> None:
+        """Apply the active color theme to the window."""
         colors = THEMES[self.theme_var.get()]
         self.configure(background=colors["background"])
         style = ttk.Style(self)
@@ -205,6 +212,7 @@ class MainWindow(tk.Tk):
             )
 
     def new_tab(self, initial_request: RequestSpec | None = None) -> BrowserTab:
+        """Create a new browser tab."""
         state = TabState(request=initial_request or RequestSpec(url=""))
         frame = ttk.Frame(self.notebook)
         frame.pack(fill="both", expand=True)
@@ -223,6 +231,7 @@ class MainWindow(tk.Tk):
         return browser_tab
 
     def close_current_tab(self) -> None:
+        """Close the current tab or quit when it is the last one."""
         if len(self.tabs_by_id) == 1:
             self.destroy()
             return
@@ -232,10 +241,12 @@ class MainWindow(tk.Tk):
         self._on_tab_changed()
 
     def focus_url_entry(self) -> None:
+        """Focus and select the URL entry."""
         self.url_entry.focus_set()
         self.url_entry.selection_range(0, "end")
 
     def open_url(self, value: str, *, new_tab: bool = False, push_history: bool = True) -> None:
+        """Open a URL in the current tab or a new tab."""
         normalized = normalize_url(value)
         if not normalized:
             self.status_var.set("Enter a URL to fetch.")
@@ -249,13 +260,16 @@ class MainWindow(tk.Tk):
         self._load_request(tab, request, push_history=push_history)
 
     def open_link(self, href: str, new_tab: bool) -> None:
+        """Open a rendered hyperlink."""
         self.open_url(href, new_tab=new_tab)
 
     def reload_current_tab(self) -> None:
+        """Reload the current tab."""
         tab = self.current_tab
         self._load_request(tab, tab.state.request, push_history=False)
 
     def go_back(self) -> None:
+        """Navigate to the previous request in tab history."""
         tab = self.current_tab
         if tab.state.history_index <= 0:
             return
@@ -264,6 +278,7 @@ class MainWindow(tk.Tk):
         self._load_request(tab, request, push_history=False)
 
     def go_forward(self) -> None:
+        """Navigate to the next request in tab history."""
         tab = self.current_tab
         if tab.state.history_index >= len(tab.state.local_history) - 1:
             return
@@ -272,14 +287,17 @@ class MainWindow(tk.Tk):
         self._load_request(tab, request, push_history=False)
 
     def change_engine(self) -> None:
+        """Switch the active render engine."""
         tab = self.current_tab
         tab.state.render_engine_name = self.engine_var.get()
         self._render_current_response(tab)
 
     def refresh_view(self) -> None:
+        """Refresh the visible representation of the current tab."""
         self._display_tab(self.current_tab)
 
     def bookmark_current_page(self) -> None:
+        """Save the current page as a bookmark."""
         tab = self.current_tab
         response = tab.state.response
         url = response.final_url if response is not None else tab.state.request.normalized_url()
@@ -288,18 +306,21 @@ class MainWindow(tk.Tk):
         self.status_var.set(f"Bookmarked {bookmark.url}")
 
     def copy_request_as_urllib(self) -> None:
+        """Copy the current request as urllib code."""
         code = generate_urllib_code(self.current_tab.state.request)
         self.clipboard_clear()
         self.clipboard_append(code)
         self.status_var.set("Copied request as urllib code.")
 
     def open_current_page_externally(self) -> None:
+        """Open the current page in the default browser."""
         tab = self.current_tab
         if tab.state.response is None:
             return
         webbrowser.open(tab.state.response.final_url)
 
     def save_response_body(self) -> None:
+        """Save the current response body to disk."""
         tab = self.current_tab
         response = tab.state.response
         if response is None:
@@ -311,6 +332,7 @@ class MainWindow(tk.Tk):
         self.status_var.set(f"Saved response body to {target}")
 
     def save_rendered_text(self) -> None:
+        """Save the rendered document text to disk."""
         tab = self.current_tab
         document = tab.state.rendered
         if document is None:
@@ -322,24 +344,29 @@ class MainWindow(tk.Tk):
         self.status_var.set(f"Saved rendered text to {target}")
 
     def open_file(self) -> None:
+        """Open a local file in the browser."""
         filename = filedialog.askopenfilename(parent=self, title="Open local file")
         if not filename:
             return
         self.open_url(Path(filename).resolve().as_uri())
 
     def clear_history(self) -> None:
+        """Clear the stored browsing history."""
         if not messagebox.askyesno("Clear history", "Delete all stored history entries?"):
             return
         self.history_store.clear()
         self.status_var.set("History cleared.")
 
     def show_history_window(self) -> None:
+        """Show the browsing history window."""
         self._show_url_list_window("History", [entry.url for entry in self.history_store.list_entries()])
 
     def show_bookmarks_window(self) -> None:
+        """Show the bookmarks window."""
         self._show_url_list_window("Bookmarks", [bookmark.url for bookmark in self.bookmark_store.list_bookmarks()])
 
     def _show_url_list_window(self, title: str, urls: list[str]) -> None:
+        """Show a searchable list of URLs."""
         window = tk.Toplevel(self)
         window.title(title)
         window.geometry("640x360")
@@ -374,6 +401,7 @@ class MainWindow(tk.Tk):
         populate()
 
     def _load_request(self, tab: BrowserTab, request: RequestSpec, *, push_history: bool) -> None:
+        """Load a request into a tab and update tab state."""
         self.status_var.set(f"Loading {request.normalized_url()} ...")
         self.update_idletasks()
         response = self.urllib_client.fetch(request)
@@ -410,6 +438,7 @@ class MainWindow(tk.Tk):
         self.status_var.set(f"{status_code} {content_type} in {response.elapsed_seconds:.2f}s")
 
     def _build_error_document(self, request: RequestSpec, error_text: str) -> RenderedDocument:
+        """Build a rendered document for request errors."""
         text = "\n".join(
             [
                 "Request failed",
@@ -422,6 +451,7 @@ class MainWindow(tk.Tk):
         return RenderedDocument(title="Request failed", text=text)
 
     def _render_current_response(self, tab: BrowserTab) -> None:
+        """Render the current response for a tab."""
         response = tab.state.response
         if response is None:
             return
@@ -433,10 +463,12 @@ class MainWindow(tk.Tk):
             encoding=response.encoding,
         )
         tab.state.title = choose_tab_title(tab.state.request, response, tab.state.rendered)
-        self.notebook.tab(tab.frame, text=tab.state.title[:24] if tab.state.title else "Untitled")  # type: ignore[no-untyped-call]
+        tab_title = tab.state.title[:24] if tab.state.title else "Untitled"
+        self.notebook.tab(tab.frame, text=tab_title)  # type: ignore[no-untyped-call]
         self.engine_var.set(tab.state.render_engine_name)
 
     def _display_tab(self, tab: BrowserTab) -> None:
+        """Display the current tab in the selected view mode."""
         mode = self.view_mode_var.get()
         if mode == "Rendered":
             if tab.state.rendered is not None:
@@ -451,12 +483,14 @@ class MainWindow(tk.Tk):
             tab.viewer.set_plain_text(format_request_preview(tab.state.request))
 
     def _format_headers_view(self, response: ResponseRecord | None) -> str:
+        """Format response headers for display."""
         if response is None:
             return "(no response)"
         status_line = f"Status: {response.status or '(none)'} {response.reason or ''}".rstrip()
         return "\n".join([status_line, "", response.headers_text()])
 
     def _show_welcome(self, tab: BrowserTab) -> None:
+        """Show the welcome text in a new tab."""
         welcome_text = "\n".join(
             [
                 "urllib_gui",
@@ -470,6 +504,7 @@ class MainWindow(tk.Tk):
         tab.viewer.set_plain_text(welcome_text)
 
     def _on_tab_changed(self) -> None:
+        """Update UI state after the selected tab changes."""
         if not self.tabs_by_id:
             return
         tab = self.current_tab
@@ -477,10 +512,12 @@ class MainWindow(tk.Tk):
         self._display_tab(tab)
 
     def _sync_toolbar_from_tab(self, tab: BrowserTab) -> None:
+        """Sync toolbar controls from tab state."""
         self.url_var.set(tab.state.request.normalized_url())
         self.engine_var.set(tab.state.render_engine_name)
 
     def _set_hover_status(self, href: str | None) -> None:
+        """Update the status bar while hovering links."""
         if href:
             self.status_var.set(href)
         elif self.current_tab.state.response is not None:

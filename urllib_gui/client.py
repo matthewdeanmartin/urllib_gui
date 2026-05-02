@@ -25,7 +25,6 @@ class NoRedirectHandler(urllib.request.HTTPRedirectHandler):
         newurl: str,
     ) -> None:
         _ = (req, fp, code, msg, headers, newurl)
-        return None
 
 
 class UrllibClient:
@@ -89,12 +88,17 @@ class UrllibClient:
 
     @staticmethod
     def _ssl_context(spec: RequestSpec) -> ssl.SSLContext:
+        """Build the TLS context for a request."""
         if spec.verify_tls:
             return ssl.create_default_context()
-        return ssl._create_unverified_context()
+        context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        context.check_hostname = False
+        context.verify_mode = ssl.CERT_NONE
+        return context
 
     @staticmethod
     def _record_from_stream(stream: Any, elapsed: float) -> ResponseRecord:
+        """Build a response record from a urllib response stream."""
         message = stream.info()
         body = stream.read()
         encoding = detect_encoding(body, message.get_content_charset())

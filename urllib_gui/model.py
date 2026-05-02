@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -261,7 +262,5 @@ def make_bookmark(title: str | None, url: str) -> Bookmark:
 
 def _basic_auth_header(username: str, password: str) -> str:
     """Return a basic auth header value."""
-    import base64
-
     token = base64.b64encode(f"{username}:{password}".encode()).decode("ascii")
     return f"Basic {token}"

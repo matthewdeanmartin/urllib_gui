@@ -20,6 +20,7 @@ class PlainTextRenderer:
         content_type: str | None = None,
         encoding: str | None = None,
     ) -> RenderedDocument:
+        """Render bytes as plain decoded text."""
         text, used_encoding = decode_bytes(html_bytes, encoding)
         return RenderedDocument(
             title=None,

@@ -2,6 +2,11 @@
 
 from typing import Protocol
 
+import urllib_gui
+from urllib_gui import cli
+from urllib_gui.__about__ import __version__
+from urllib_gui.ui.viewer import HypertextViewer
+
 
 class MonkeyPatchLike(Protocol):
     """Minimal protocol for the pytest monkeypatch fixture used here."""
@@ -12,21 +17,22 @@ class MonkeyPatchLike(Protocol):
 
 def test_import() -> None:
     """Package can be imported."""
-    import urllib_gui  # noqa: F401
+    assert urllib_gui.__name__ == "urllib_gui"
+
+
+def test_viewer_module_imports() -> None:
+    """The viewer module should import without evaluating unsupported tkinter generics."""
+    assert HypertextViewer.__name__ == "HypertextViewer"
 
 
 def test_version() -> None:
     """Package exposes a version string."""
-    from urllib_gui.__about__ import __version__
-
     assert isinstance(__version__, str)
     assert __version__
 
 
 def test_main_launches_app(monkeypatch: MonkeyPatchLike) -> None:
     """CLI should hand parsed options to the GUI runner."""
-    from urllib_gui import cli
-
     captured: dict[str, str | None] = {}
 
     def fake_run(*, initial_url: str | None = None, theme: str = "light") -> None:

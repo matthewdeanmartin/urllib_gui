@@ -58,42 +58,39 @@ class _DocumentBuilder(HTMLParser):
         self.active_link_label: list[str] = []
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        """Handle the opening of an HTML tag."""
         attr_map = {name: value or "" for name, value in attrs}
         if tag in IGNORED_ELEMENTS:
             self.ignored_depth += 1
-            return
-        if tag == "title":
+        elif tag == "title":
             self.in_title = True
+        elif self.ignored_depth:
             return
-        if self.ignored_depth:
-            return
-        if tag == "br":
+        elif tag == "br":
             self._ensure_newlines(1)
-            return
-        if tag == "hr":
+        elif tag == "hr":
             self._ensure_newlines(1)
             self._append_raw("----")
             self._ensure_newlines(1)
-            return
-        if tag in {"p", "div", "section", "article", "main", "header", "footer", "nav", "blockquote"}:
+        elif tag in {"p", "div", "section", "article", "main", "header", "footer", "nav", "blockquote"} or tag in {
+            "h1",
+            "h2",
+            "h3",
+            "h4",
+            "h5",
+            "h6",
+        }:
             self._ensure_newlines(2)
-            return
-        if tag in {"h1", "h2", "h3", "h4", "h5", "h6"}:
-            self._ensure_newlines(2)
-            return
-        if tag == "pre":
+        elif tag == "pre":
             self._ensure_newlines(2)
             self.in_pre = True
-            return
-        if tag == "ul":
+        elif tag == "ul":
             self._ensure_newlines(2)
             self.list_stack.append(("ul", 0))
-            return
-        if tag == "ol":
+        elif tag == "ol":
             self._ensure_newlines(2)
             self.list_stack.append(("ol", 0))
-            return
-        if tag == "li":
+        elif tag == "li":
             self._ensure_newlines(1)
             indent = "  " * max(len(self.list_stack) - 1, 0)
             if self.list_stack:
@@ -107,15 +104,13 @@ class _DocumentBuilder(HTMLParser):
             else:
                 bullet = "• "
             self._append_raw(f"{indent}{bullet}")
-            return
-        if tag == "a":
+        elif tag == "a":
             href = attr_map.get("href", "")
             self.active_link_href = urljoin(self.base_url, href)
             self.active_link_title = attr_map.get("title") or None
             self.active_link_start = self._length
             self.active_link_label = []
-            return
-        if tag in {"td", "th"} and self._length and self.output[-1] not in {" ", "\n", "\t"}:
+        elif tag in {"td", "th"} and self._length and self.output[-1] not in {" ", "\n", "\t"}:
             self._append_raw("  ")
 
     def handle_endtag(self, tag: str) -> None:
@@ -229,6 +224,7 @@ class _DocumentBuilder(HTMLParser):
         self.active_link_label = []
 
     def finalize(self) -> RenderedDocument:
+        """Build the final rendered document."""
         raw_text = "".join(self.output)
         leading_trim = len(raw_text) - len(raw_text.lstrip())
         text = raw_text.strip()
@@ -272,6 +268,7 @@ class _BaseStdlibHtmlRenderer:
         content_type: str | None = None,
         encoding: str | None = None,
     ) -> RenderedDocument:
+        """Render HTML bytes into a text document."""
         text, used_encoding = decode_bytes(html_bytes, encoding)
         builder = _DocumentBuilder(base_url=base_url, track_links=self.track_links)
         builder.feed(text)

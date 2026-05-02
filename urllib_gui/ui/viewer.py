@@ -6,15 +6,19 @@ import tkinter as tk
 import webbrowser
 from collections.abc import Callable
 from tkinter import ttk
+from typing import TYPE_CHECKING
 
 from urllib_gui.model import LinkSpan, RenderedDocument
 
 LinkOpener = Callable[[str, bool], None]
 StatusUpdater = Callable[[str | None], None]
-EventHandler = Callable[[tk.Event[tk.Misc]], None]
+if TYPE_CHECKING:
+    type EventHandler = Callable[[tk.Event[tk.Misc]], None]
+else:
+    type EventHandler = Callable[[tk.Event], None]
 
 
-class HypertextViewer(ttk.Frame):
+class HypertextViewer(ttk.Frame):  # pylint: disable=too-many-ancestors
     """Text viewer that can tag and open hyperlinks."""
 
     def __init__(

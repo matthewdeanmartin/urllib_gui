@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import tkinter as tk
 
+from urllib_gui.main_window import MainWindow
+
 
 def run(*, initial_url: str | None = None, theme: str = "light") -> None:
     """Launch the Tkinter application."""
-    from urllib_gui.main_window import MainWindow
-
     try:
         window = MainWindow(initial_url=initial_url, theme=theme)
     except tk.TclError as error:

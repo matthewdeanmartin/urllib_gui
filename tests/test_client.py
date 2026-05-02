@@ -12,7 +12,8 @@ from urllib_gui.model import RequestSpec
 class _Handler(BaseHTTPRequestHandler):
     """Small test server handler."""
 
-    def do_GET(self) -> None:
+    def do_GET(self) -> None:  # pylint: disable=invalid-name
+        """Serve test responses for the in-process HTTP server."""
         if self.path == "/missing":
             body = b"not found"
             self.send_response(404, "Not Found")
@@ -29,8 +30,9 @@ class _Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
-    def log_message(self, format: str, *args: object) -> None:
-        _ = (format, args)
+    def log_message(self, message_format: str, *args: object) -> None:  # pylint: disable=arguments-differ
+        """Suppress request logging during tests."""
+        _ = (message_format, args)
 
 
 def test_client_fetches_success_and_http_errors() -> None:
