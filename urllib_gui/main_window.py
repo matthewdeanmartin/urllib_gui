@@ -115,7 +115,7 @@ class MainWindow(tk.Tk):
         return self.tabs_by_id[tab_id]
 
     def destroy(self) -> None:
-        """Shut down the fetch executor before tearing down the window."""
+        """Shut down the fetch executor and close stores before tearing down the window."""
         # In-flight urllib.request calls cannot be cancelled mid-socket; cancel_futures
         # only drops queued work. Workers may keep running until the socket times out
         # or completes, but their results are ignored via the per-tab fetch_seq guard.
@@ -123,6 +123,11 @@ class MainWindow(tk.Tk):
         # that exposes the underlying socket so we can shutdown(SHUT_RDWR) it.
         with suppress(RuntimeError):
             self.fetch_executor.shutdown(wait=False, cancel_futures=True)
+
+        self.history_store.close()
+        self.bookmark_store.close()
+        self.saved_request_store.close()
+
         super().destroy()
 
     def build_menu(self) -> None:

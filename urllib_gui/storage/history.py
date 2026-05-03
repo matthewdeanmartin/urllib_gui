@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import atexit
 import sqlite3
 from datetime import datetime
 from pathlib import Path
@@ -15,12 +16,16 @@ class HistoryStore:
 
     def __init__(self, path: Path | None = None) -> None:
         self.path = path or ensure_config_dir() / "history.sqlite3"
+        self.connection: sqlite3.Connection | None = sqlite3.connect(self.path)
         self.initialize()
+        atexit.register(self.close)
 
     def add_entry(self, entry: HistoryEntry) -> None:
         """Store a history entry."""
-        with sqlite3.connect(self.path) as connection:
-            connection.execute(
+        if self.connection is None:
+            return
+        with self.connection:
+            self.connection.execute(
                 """
                 INSERT INTO history (url, title, method, status, content_type, visited_at)
                 VALUES (?, ?, ?, ?, ?, ?)
@@ -34,10 +39,11 @@ class HistoryStore:
                     entry.visited_at.isoformat(),
                 ),
             )
-            connection.commit()
 
     def list_entries(self, *, search: str = "", limit: int = 200) -> list[HistoryEntry]:
         """Return stored history entries, newest first."""
+        if self.connection is None:
+            return []
         sql = """
             SELECT url, title, method, status, content_type, visited_at
             FROM history
@@ -49,8 +55,9 @@ class HistoryStore:
             parameters.extend([pattern, pattern])
         sql += " ORDER BY visited_at DESC LIMIT ?"
         parameters.append(limit)
-        with sqlite3.connect(self.path) as connection:
-            rows = connection.execute(sql, parameters).fetchall()
+
+        rows = self.connection.execute(sql, parameters).fetchall()
+
         return [
             HistoryEntry(
                 url=row[0],
@@ -65,22 +72,26 @@ class HistoryStore:
 
     def delete_entry(self, url: str, visited_at: datetime) -> None:
         """Delete a single history entry identified by url + timestamp."""
-        with sqlite3.connect(self.path) as connection:
-            connection.execute(
+        if self.connection is None:
+            return
+        with self.connection:
+            self.connection.execute(
                 "DELETE FROM history WHERE url = ? AND visited_at = ?",
                 (url, visited_at.isoformat()),
             )
-            connection.commit()
 
     def clear(self) -> None:
         """Delete all history entries."""
-        with sqlite3.connect(self.path) as connection:
-            connection.execute("DELETE FROM history")
-            connection.commit()
+        if self.connection is None:
+            return
+        with self.connection:
+            self.connection.execute("DELETE FROM history")
 
     def initialize(self) -> None:
-        with sqlite3.connect(self.path) as connection:
-            connection.execute("""
+        if self.connection is None:
+            return
+        with self.connection:
+            self.connection.execute("""
                 CREATE TABLE IF NOT EXISTS history (
                     id INTEGER PRIMARY KEY,
                     url TEXT NOT NULL,
@@ -91,4 +102,10 @@ class HistoryStore:
                     visited_at TEXT NOT NULL
                 )
                 """)
-            connection.commit()
+
+    def close(self) -> None:
+        """Close the store."""
+        if self.connection is not None:
+            self.connection.close()
+            self.connection = None
+            atexit.unregister(self.close)

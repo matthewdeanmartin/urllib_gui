@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import tkinter as tk
-from tkinter import messagebox, simpledialog, ttk
 from collections.abc import Callable
+from tkinter import messagebox, simpledialog, ttk
 
 from urllib_gui.model import RequestSpec
 from urllib_gui.storage.saved_requests import SavedRequest, SavedRequestStore

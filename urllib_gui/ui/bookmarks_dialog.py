@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import json
 import tkinter as tk
+from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
-from collections.abc import Callable
 
 from urllib_gui.model import Bookmark
 from urllib_gui.storage.bookmarks import BookmarkStore

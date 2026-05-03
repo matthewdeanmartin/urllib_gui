@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import tkinter as tk
-from tkinter import messagebox, ttk
 from collections.abc import Callable
+from tkinter import messagebox, ttk
 
 from urllib_gui.storage.app_config import AppConfig
 

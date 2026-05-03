@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import atexit
 import json
 import sqlite3
 from collections.abc import Iterable
@@ -128,16 +129,16 @@ class SavedRequestStore:
 
     def __init__(self, db_path: Path | None = None) -> None:
         self._path = db_path or (ensure_config_dir() / "saved_requests.sqlite3")
-        self._initialize()
+        self.connection: sqlite3.Connection | None = sqlite3.connect(self._path)
+        self.connection.row_factory = sqlite3.Row
+        self.initialize()
+        atexit.register(self.close)
 
-    def _connect(self) -> sqlite3.Connection:
-        conn = sqlite3.connect(self._path)
-        conn.row_factory = sqlite3.Row
-        return conn
-
-    def _initialize(self) -> None:
-        with self._connect() as conn:
-            conn.execute("""
+    def initialize(self) -> None:
+        if self.connection is None:
+            return
+        with self.connection:
+            self.connection.execute("""
                 CREATE TABLE IF NOT EXISTS saved_requests (
                     id INTEGER PRIMARY KEY,
                     name TEXT NOT NULL UNIQUE,
@@ -147,13 +148,14 @@ class SavedRequestStore:
                     updated_at TEXT NOT NULL
                 )
                 """)
-            conn.commit()
 
     def save(self, saved: SavedRequest) -> None:
         """Insert or replace a saved request by name."""
+        if self.connection is None:
+            return
         now = utc_now().isoformat()
-        with self._connect() as conn:
-            conn.execute(
+        with self.connection:
+            self.connection.execute(
                 """
                 INSERT INTO saved_requests (name, spec_json, tags, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?)
@@ -170,18 +172,19 @@ class SavedRequestStore:
                     now,
                 ),
             )
-            conn.commit()
 
     def list_saved(self, query: str = "") -> list[SavedRequest]:
         """Return saved requests, optionally filtered by name."""
-        with self._connect() as conn:
-            if query:
-                rows = conn.execute(
-                    "SELECT * FROM saved_requests WHERE name LIKE ? ORDER BY updated_at DESC",
-                    (f"%{query}%",),
-                ).fetchall()
-            else:
-                rows = conn.execute("SELECT * FROM saved_requests ORDER BY updated_at DESC").fetchall()
+        if self.connection is None:
+            return []
+        if query:
+            rows = self.connection.execute(
+                "SELECT * FROM saved_requests WHERE name LIKE ? ORDER BY updated_at DESC",
+                (f"%{query}%",),
+            ).fetchall()
+        else:
+            rows = self.connection.execute("SELECT * FROM saved_requests ORDER BY updated_at DESC").fetchall()
+
         results = []
         for row in rows:
             try:
@@ -206,15 +209,24 @@ class SavedRequestStore:
 
     def delete(self, name: str) -> None:
         """Delete a saved request by name."""
-        with self._connect() as conn:
-            conn.execute("DELETE FROM saved_requests WHERE name = ?", (name,))
-            conn.commit()
+        if self.connection is None:
+            return
+        with self.connection:
+            self.connection.execute("DELETE FROM saved_requests WHERE name = ?", (name,))
 
     def rename(self, old_name: str, new_name: str) -> None:
         """Rename a saved request."""
-        with self._connect() as conn:
-            conn.execute(
+        if self.connection is None:
+            return
+        with self.connection:
+            self.connection.execute(
                 "UPDATE saved_requests SET name = ?, updated_at = ? WHERE name = ?",
                 (new_name, utc_now().isoformat(), old_name),
             )
-            conn.commit()
+
+    def close(self) -> None:
+        """Close the store."""
+        if self.connection is not None:
+            self.connection.close()
+            self.connection = None
+            atexit.unregister(self.close)

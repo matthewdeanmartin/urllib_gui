@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import atexit
 import json
 import sqlite3
 from datetime import datetime
@@ -16,12 +17,16 @@ class BookmarkStore:
 
     def __init__(self, path: Path | None = None) -> None:
         self.path = path or ensure_config_dir() / "bookmarks.sqlite3"
+        self.connection: sqlite3.Connection | None = sqlite3.connect(self.path)
         self.initialize()
+        atexit.register(self.close)
 
     def add(self, bookmark: Bookmark) -> None:
         """Insert or update a bookmark."""
-        with sqlite3.connect(self.path) as connection:
-            connection.execute(
+        if self.connection is None:
+            return
+        with self.connection:
+            self.connection.execute(
                 """
                 INSERT INTO bookmarks (title, url, tags, notes, created_at)
                 VALUES (?, ?, ?, ?, ?)
@@ -38,10 +43,11 @@ class BookmarkStore:
                     bookmark.created_at.isoformat(),
                 ),
             )
-            connection.commit()
 
     def list_bookmarks(self, *, search: str = "") -> list[Bookmark]:
         """Return bookmarks ordered by title."""
+        if self.connection is None:
+            return []
         sql = """
             SELECT title, url, tags, notes, created_at
             FROM bookmarks
@@ -52,8 +58,9 @@ class BookmarkStore:
             pattern = f"%{search}%"
             parameters.extend([pattern, pattern, pattern])
         sql += " ORDER BY title COLLATE NOCASE ASC"
-        with sqlite3.connect(self.path) as connection:
-            rows = connection.execute(sql, parameters).fetchall()
+
+        rows = self.connection.execute(sql, parameters).fetchall()
+
         return [
             Bookmark(
                 title=row[0],
@@ -67,13 +74,16 @@ class BookmarkStore:
 
     def remove(self, url: str) -> None:
         """Delete a bookmark by URL."""
-        with sqlite3.connect(self.path) as connection:
-            connection.execute("DELETE FROM bookmarks WHERE url = ?", (url,))
-            connection.commit()
+        if self.connection is None:
+            return
+        with self.connection:
+            self.connection.execute("DELETE FROM bookmarks WHERE url = ?", (url,))
 
     def initialize(self) -> None:
-        with sqlite3.connect(self.path) as connection:
-            connection.execute("""
+        if self.connection is None:
+            return
+        with self.connection:
+            self.connection.execute("""
                 CREATE TABLE IF NOT EXISTS bookmarks (
                     id INTEGER PRIMARY KEY,
                     title TEXT NOT NULL,
@@ -83,4 +93,10 @@ class BookmarkStore:
                     created_at TEXT NOT NULL
                 )
                 """)
-            connection.commit()
+
+    def close(self) -> None:
+        """Close the store."""
+        if self.connection is not None:
+            self.connection.close()
+            self.connection = None
+            atexit.unregister(self.close)
