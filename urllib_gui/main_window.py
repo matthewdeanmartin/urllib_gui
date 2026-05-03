@@ -36,11 +36,13 @@ THEMES = {
         "background": "#ffffff",
         "foreground": "#111111",
         "link": "#005cc5",
+        "visited": "#800080",
     },
     "dark": {
         "background": "#1e1e1e",
         "foreground": "#dddddd",
         "link": "#6ab0ff",
+        "visited": "#b48cff",
     },
 }
 
@@ -131,6 +133,12 @@ class MainWindow(tk.Tk):
         file_menu.add_command(label="Quit", command=self.destroy)
         menu_bar.add_cascade(label="File", menu=file_menu)
 
+        edit_menu = tk.Menu(menu_bar, tearoff=False)
+        edit_menu.add_command(label="Find…", accelerator="Ctrl+F", command=self.show_find_bar)
+        edit_menu.add_separator()
+        edit_menu.add_command(label="Encoding Override…", command=self.show_encoding_override)
+        menu_bar.add_cascade(label="Edit", menu=edit_menu)
+
         view_menu = tk.Menu(menu_bar, tearoff=False)
         view_menu.add_command(label="Reload", accelerator="Ctrl+R", command=self.reload_current_tab)
         view_menu.add_command(label="Toggle Request Options", command=self._toggle_drawer)
@@ -139,6 +147,10 @@ class MainWindow(tk.Tk):
             view_menu.add_radiobutton(
                 label=f"View {mode}", value=mode, variable=self.view_mode_var, command=self.refresh_view
             )
+        view_menu.add_separator()
+        view_menu.add_command(label="Zoom In", accelerator="Ctrl++", command=self.zoom_in)
+        view_menu.add_command(label="Zoom Out", accelerator="Ctrl+-", command=self.zoom_out)
+        view_menu.add_command(label="Reset Zoom", accelerator="Ctrl+0", command=self.zoom_reset)
         view_menu.add_separator()
         theme_menu = tk.Menu(view_menu, tearoff=False)
         for theme_name in THEMES:
@@ -199,6 +211,9 @@ class MainWindow(tk.Tk):
         ttk.Button(toolbar, text="Back", command=self.go_back).pack(side="left")
         ttk.Button(toolbar, text="Forward", command=self.go_forward).pack(side="left", padx=(4, 0))
         ttk.Button(toolbar, text="Reload", command=self.reload_current_tab).pack(side="left", padx=(4, 8))
+        self.method_label_var = tk.StringVar(value="GET")
+        self.method_indicator = ttk.Label(toolbar, textvariable=self.method_label_var, width=7, anchor="center", foreground="#666666")
+        self.method_indicator.pack(side="left")
         self.url_entry = ttk.Entry(toolbar, textvariable=self.url_var)
         self.url_entry.pack(side="left", fill="x", expand=True)
         self.url_entry.bind("<Return>", lambda _event: self.open_url(self.url_var.get()))
@@ -227,6 +242,9 @@ class MainWindow(tk.Tk):
         """Handle Send Request from the drawer."""
         tab = self.current_tab
         self.url_var.set(spec.url)
+        method = spec.method.upper()
+        self.method_label_var.set(method)
+        self.method_indicator.configure(foreground="#cc3300" if method != "GET" else "#666666")
         self.load_request(tab, spec, push_history=True)
 
     def build_notebook(self) -> None:
@@ -254,6 +272,11 @@ class MainWindow(tk.Tk):
         self.bind("<Alt-Right>", lambda _event: self.go_forward())
         self.bind("<Control-d>", lambda _event: self.bookmark_current_page())
         self.bind("<Control-s>", lambda _event: self.save_response_body())
+        self.bind("<Control-f>", lambda _event: self.show_find_bar())
+        self.bind("<Control-equal>", lambda _event: self.zoom_in())
+        self.bind("<Control-plus>", lambda _event: self.zoom_in())
+        self.bind("<Control-minus>", lambda _event: self.zoom_out())
+        self.bind("<Control-0>", lambda _event: self.zoom_reset())
 
     def apply_theme(self) -> None:
         """Apply the active color theme to the window."""
@@ -267,6 +290,7 @@ class MainWindow(tk.Tk):
                 background=colors["background"],
                 foreground=colors["foreground"],
                 link_foreground=colors["link"],
+                visited_foreground=colors.get("visited", "#800080"),
             )
 
     def _on_theme_changed(self) -> None:
@@ -282,10 +306,12 @@ class MainWindow(tk.Tk):
         frame.pack(fill="both", expand=True)
         viewer = HypertextViewer(frame, open_link_callback=self.open_link, status_callback=self.set_hover_status)
         viewer.pack(fill="both", expand=True)
+        colors = THEMES[self.theme_var.get()]
         viewer.apply_theme(
-            background=THEMES[self.theme_var.get()]["background"],
-            foreground=THEMES[self.theme_var.get()]["foreground"],
-            link_foreground=THEMES[self.theme_var.get()]["link"],
+            background=colors["background"],
+            foreground=colors["foreground"],
+            link_foreground=colors["link"],
+            visited_foreground=colors.get("visited", "#800080"),
         )
         browser_tab = BrowserTab(frame=frame, viewer=viewer, state=state)
         self.notebook.add(frame, text="New Tab")
@@ -328,7 +354,9 @@ class MainWindow(tk.Tk):
         self.load_request(tab, request, push_history=push_history)
 
     def open_link(self, href: str, new_tab: bool) -> None:
-        """Open a rendered hyperlink."""
+        """Open a rendered hyperlink and mark it visited in all tabs."""
+        for bt in self.tabs_by_id.values():
+            bt.viewer.mark_visited(href)
         self.open_url(href, new_tab=new_tab)
 
     def reload_current_tab(self) -> None:
@@ -761,6 +789,9 @@ class MainWindow(tk.Tk):
         """Sync toolbar controls from tab state."""
         self.url_var.set(tab.state.request.normalized_url())
         self.engine_var.set(tab.state.render_engine_name)
+        method = tab.state.request.method.upper()
+        self.method_label_var.set(method)
+        self.method_indicator.configure(foreground="#cc3300" if method != "GET" else "#666666")
         if self.request_drawer._visible:
             self.request_drawer.populate_from_spec(tab.state.request)
 
@@ -781,3 +812,58 @@ class MainWindow(tk.Tk):
             status_code = response.status if response.status is not None else "ERR"
             content_type = response.content_type or "unknown"
             self.status_var.set(f"{status_code} {content_type} in {response.elapsed_seconds:.2f}s")
+
+    # ------------------------------------------------------------------ zoom
+
+    def zoom_in(self) -> None:
+        """Increase font size in the current viewer."""
+        self.current_tab.viewer.zoom_in()
+        self.status_var.set(f"Zoom: {self.current_tab.viewer.current_font_size}pt")
+
+    def zoom_out(self) -> None:
+        """Decrease font size in the current viewer."""
+        self.current_tab.viewer.zoom_out()
+        self.status_var.set(f"Zoom: {self.current_tab.viewer.current_font_size}pt")
+
+    def zoom_reset(self) -> None:
+        """Reset font size in the current viewer."""
+        self.current_tab.viewer.zoom_reset()
+        self.status_var.set(f"Zoom: {self.current_tab.viewer.current_font_size}pt")
+
+    # ------------------------------------------------------------------ find
+
+    def show_find_bar(self) -> None:
+        """Show the find-in-page bar on the current viewer."""
+        self.current_tab.viewer.show_find_bar()
+
+    # ------------------------------------------------------------------ encoding
+
+    def show_encoding_override(self) -> None:
+        """Prompt the user for an encoding and re-render the current response."""
+        import tkinter.simpledialog as sd
+
+        tab = self.current_tab
+        if tab.state.response is None:
+            self.status_var.set("No response to re-decode.")
+            return
+        current = tab.state.response.encoding or "utf-8"
+        enc = sd.askstring(
+            "Encoding Override",
+            f"Enter encoding (current: {current}):",
+            initialvalue=current,
+            parent=self,
+        )
+        if not enc or not enc.strip():
+            return
+        enc = enc.strip()
+        try:
+            b"test".decode(enc)
+        except LookupError:
+            from tkinter import messagebox
+            messagebox.showerror("Encoding Override", f"Unknown encoding: {enc}", parent=self)
+            return
+        import dataclasses
+        tab.state.response = dataclasses.replace(tab.state.response, encoding=enc)
+        self.render_current_response(tab)
+        self.display_tab(tab)
+        self.status_var.set(f"Re-rendered with encoding: {enc}")

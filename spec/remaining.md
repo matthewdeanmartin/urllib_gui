@@ -17,8 +17,5 @@ These pieces are intentionally deferred:
 - Preferences/config editor and persistent theme settings.
 - Proxy and authentication UI helpers.
 
-- Find-in-page, zoom controls, encoding override, and visited-link styling.
-- Optional third-party renderer plugins and engine discovery.
 - Async request loading, stop/cancel behavior, and redirect-chain inspection.
-- Non-GET request workflows in the UI, including JSON and form posting.
 - Better HTML fidelity for tables, blockquotes, code/pre formatting, and form rendering.
