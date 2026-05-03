@@ -13,6 +13,45 @@ from urllib_gui.model import Bookmark
 from urllib_gui.storage.bookmarks import BookmarkStore
 
 
+def bookmark_from_import_entry(entry: object) -> Bookmark | None:
+    """Build a bookmark from imported JSON data, skipping invalid entries."""
+    if not isinstance(entry, dict):
+        return None
+    url = entry.get("url")
+    title = entry.get("title", url)
+    tags_raw = entry.get("tags", [])
+    notes = entry.get("notes")
+    valid = (
+        isinstance(url, str)
+        and bool(url)
+        and isinstance(title, str)
+        and isinstance(tags_raw, list)
+        and all(isinstance(tag, str) for tag in tags_raw)
+        and (notes is None or isinstance(notes, str))
+    )
+    if not valid:
+        return None
+    assert isinstance(url, str)
+    assert isinstance(title, str)
+    assert isinstance(tags_raw, list)
+    assert notes is None or isinstance(notes, str)
+    tags = [tag for tag in tags_raw if isinstance(tag, str)]
+    created_at_raw = entry.get("created_at")
+    created_at: datetime | None
+    if created_at_raw is None:
+        created_at = datetime.now(UTC)
+    elif isinstance(created_at_raw, str):
+        try:
+            created_at = datetime.fromisoformat(created_at_raw)
+        except ValueError:
+            created_at = None
+    else:
+        created_at = None
+    if created_at is None:
+        return None
+    return Bookmark(title=title, url=url, tags=tags, notes=notes, created_at=created_at)
+
+
 class BookmarkEditDialog(tk.Toplevel):
     """Simple dialog for editing a single bookmark's title, tags, and notes."""
 
@@ -150,7 +189,7 @@ class BookmarksDialog(tk.Toplevel):
         all_tags: set[str] = set()
         for bm in self._store.list_bookmarks():
             all_tags.update(bm.tags)
-        self._tag_combo["values"] = [""] + sorted(all_tags)
+        self._tag_combo["values"] = ["", *sorted(all_tags)]
 
         if tag_filter:
             bookmarks = [b for b in bookmarks if tag_filter in b.tags]
@@ -257,24 +296,18 @@ class BookmarksDialog(tk.Toplevel):
             return
         try:
             data = json.loads(Path(path).read_text(encoding="utf-8"))
-        except Exception as exc:
+        except (OSError, json.JSONDecodeError) as exc:
             messagebox.showerror("Import", f"Could not read file:\n{exc}", parent=self)
+            return
+        if not isinstance(data, list):
+            messagebox.showerror("Import", "Bookmark import files must contain a JSON list.", parent=self)
             return
         count = 0
         for entry in data:
-            try:
-                bm = Bookmark(
-                    title=entry.get("title") or entry.get("url", ""),
-                    url=entry["url"],
-                    tags=entry.get("tags", []),
-                    notes=entry.get("notes"),
-                    created_at=(
-                        datetime.fromisoformat(entry["created_at"]) if "created_at" in entry else datetime.now(UTC)
-                    ),
-                )
-                self._store.add(bm)
-                count += 1
-            except Exception:  # pylint: disable=broad-except
+            bookmark = bookmark_from_import_entry(entry)
+            if bookmark is None:
                 continue
+            self._store.add(bookmark)
+            count += 1
         messagebox.showinfo("Import", f"Imported {count} bookmarks.", parent=self)
         self._populate()

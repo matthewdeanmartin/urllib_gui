@@ -6,9 +6,10 @@ import time
 import tkinter as tk
 import webbrowser
 from concurrent.futures import Future, ThreadPoolExecutor
-from dataclasses import dataclass
+from contextlib import suppress
+from dataclasses import dataclass, replace
 from pathlib import Path
-from tkinter import filedialog, messagebox, ttk
+from tkinter import filedialog, messagebox, simpledialog, ttk
 from typing import cast
 from urllib.parse import urlparse
 
@@ -27,6 +28,7 @@ from urllib_gui.model import (
 )
 from urllib_gui.render import built_in_renderers, choose_default_engine_name
 from urllib_gui.storage import AppConfig, BookmarkStore, HistoryStore, SavedRequest, SavedRequestStore
+from urllib_gui.storage.saved_requests import json_to_spec, spec_to_json
 from urllib_gui.ui import (
     BookmarksDialog,
     CookieJarDialog,
@@ -119,10 +121,8 @@ class MainWindow(tk.Tk):
         # or completes, but their results are ignored via the per-tab fetch_seq guard.
         # TODO: a real cancellation path would require switching to a custom opener
         # that exposes the underlying socket so we can shutdown(SHUT_RDWR) it.
-        try:
+        with suppress(RuntimeError):
             self.fetch_executor.shutdown(wait=False, cancel_futures=True)
-        except Exception:  # pylint: disable=broad-except
-            pass
         super().destroy()
 
     def build_menu(self) -> None:
@@ -454,13 +454,11 @@ class MainWindow(tk.Tk):
 
     def save_request_to_scratchpad(self) -> None:
         """Save the current request to the scratchpad with a name prompt."""
-        import tkinter.simpledialog as sd
-
         spec = self.current_tab.state.request
         if not spec.url:
             messagebox.showinfo("Save Request", "No active request to save.", parent=self)
             return
-        name = sd.askstring("Save to Scratchpad", "Name for this request:", parent=self)
+        name = simpledialog.askstring("Save to Scratchpad", "Name for this request:", parent=self)
         if not name or not name.strip():
             return
         self.saved_request_store.save(SavedRequest(name=name.strip(), spec=spec))
@@ -481,9 +479,7 @@ class MainWindow(tk.Tk):
         )
         if not target:
             return
-        from urllib_gui.storage.saved_requests import _spec_to_json
-
-        Path(target).write_text(_spec_to_json(spec), encoding="utf-8")
+        Path(target).write_text(spec_to_json(spec), encoding="utf-8")
         self.status_var.set(f"Request saved to {target}")
 
     def open_request_from_file(self) -> None:
@@ -495,12 +491,10 @@ class MainWindow(tk.Tk):
         )
         if not filename:
             return
-        from urllib_gui.storage.saved_requests import _json_to_spec
-
         try:
             text = Path(filename).read_text(encoding="utf-8")
-            spec = _json_to_spec(text)
-        except Exception as exc:  # pylint: disable=broad-except
+            spec = json_to_spec(text)
+        except (OSError, TypeError, ValueError, KeyError) as exc:
             messagebox.showerror("Open Request", f"Could not read request file:\n{exc}", parent=self)
             return
         tab = self.current_tab
@@ -620,11 +614,8 @@ class MainWindow(tk.Tk):
         # Marshal completion back to the Tk thread; the seq guard ignores stale results
         # from navigations the user has since superseded.
         def bounce(fut: Future[ResponseRecord]) -> None:
-            try:
+            with suppress(RuntimeError, tk.TclError):
                 self.after(0, self.on_fetch_complete, tab, seq, request, push_history, started, fut)
-            except (RuntimeError, tk.TclError):
-                # Window already torn down; drop the result.
-                pass
 
         future.add_done_callback(bounce)
 
@@ -710,15 +701,11 @@ class MainWindow(tk.Tk):
         """Stop the progress animation if no tab is still loading."""
         if any(t.state.loading for t in self.tabs_by_id.values()):
             return
-        try:
+        with suppress(tk.TclError):
             self.progress.stop()
-        except tk.TclError:
-            pass
         if self.spinner_after_id is not None:
-            try:
+            with suppress(tk.TclError):
                 self.after_cancel(self.spinner_after_id)
-            except tk.TclError:
-                pass
             self.spinner_after_id = None
 
     def build_error_document(self, request: RequestSpec, error_text: str) -> RenderedDocument:
@@ -850,14 +837,12 @@ class MainWindow(tk.Tk):
 
     def show_encoding_override(self) -> None:
         """Prompt the user for an encoding and re-render the current response."""
-        import tkinter.simpledialog as sd
-
         tab = self.current_tab
         if tab.state.response is None:
             self.status_var.set("No response to re-decode.")
             return
         current = tab.state.response.encoding or "utf-8"
-        enc = sd.askstring(
+        enc = simpledialog.askstring(
             "Encoding Override",
             f"Enter encoding (current: {current}):",
             initialvalue=current,
@@ -869,13 +854,9 @@ class MainWindow(tk.Tk):
         try:
             b"test".decode(enc)
         except LookupError:
-            from tkinter import messagebox
-
             messagebox.showerror("Encoding Override", f"Unknown encoding: {enc}", parent=self)
             return
-        import dataclasses
-
-        tab.state.response = dataclasses.replace(tab.state.response, encoding=enc)
+        tab.state.response = replace(tab.state.response, encoding=enc)
         self.render_current_response(tab)
         self.display_tab(tab)
         self.status_var.set(f"Re-rendered with encoding: {enc}")

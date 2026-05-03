@@ -5,6 +5,7 @@ from __future__ import annotations
 import tkinter as tk
 import webbrowser
 from collections.abc import Callable
+from contextlib import suppress
 from tkinter import ttk
 from typing import TYPE_CHECKING
 
@@ -221,10 +222,8 @@ class HypertextViewer(ttk.Frame):  # pylint: disable=too-many-ancestors
         self._find_var.set("")
 
     def _clear_find_highlights(self) -> None:
-        try:
+        with suppress(tk.TclError):
             self.text.tag_remove("find_highlight", "1.0", "end")
-        except tk.TclError:
-            pass
         self._find_match_count = 0
         self._find_current = 0
 

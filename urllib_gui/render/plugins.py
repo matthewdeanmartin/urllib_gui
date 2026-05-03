@@ -2,8 +2,19 @@
 
 from __future__ import annotations
 
+from importlib import import_module
+from typing import Any, cast
+
 from urllib_gui.model import RenderedDocument
 from urllib_gui.render.base import RenderEngine, decode_bytes
+
+
+def import_optional_module(module_name: str) -> Any | None:
+    """Import an optional renderer dependency when available."""
+    try:
+        return import_module(module_name)
+    except ImportError:
+        return None
 
 
 def _discover_plugins() -> list[RenderEngine]:
@@ -16,9 +27,8 @@ def _discover_plugins() -> list[RenderEngine]:
 
 
 def _try_html2text() -> list[RenderEngine]:
-    try:
-        import html2text as _h2t  # type: ignore[import-untyped]
-    except ImportError:
+    html2text = import_optional_module("html2text")
+    if html2text is None:
         return []
 
     class Html2TextRenderer:
@@ -34,7 +44,7 @@ def _try_html2text() -> list[RenderEngine]:
             encoding: str | None = None,
         ) -> RenderedDocument:
             text, _ = decode_bytes(html_bytes, encoding)
-            h = _h2t.HTML2Text()
+            h = cast(Any, html2text).HTML2Text()
             h.ignore_links = False
             h.baseurl = base_url
             result = h.handle(text)
@@ -44,9 +54,8 @@ def _try_html2text() -> list[RenderEngine]:
 
 
 def _try_beautifulsoup() -> list[RenderEngine]:
-    try:
-        from bs4 import BeautifulSoup  # type: ignore[import-untyped]
-    except ImportError:
+    bs4 = import_optional_module("bs4")
+    if bs4 is None:
         return []
 
     class BeautifulSoupRenderer:
@@ -61,8 +70,8 @@ def _try_beautifulsoup() -> list[RenderEngine]:
             content_type: str | None = None,
             encoding: str | None = None,
         ) -> RenderedDocument:
-            text, used_enc = decode_bytes(html_bytes, encoding)
-            soup = BeautifulSoup(text, "html.parser")
+            text, _ = decode_bytes(html_bytes, encoding)
+            soup = cast(Any, bs4).BeautifulSoup(text, "html.parser")
             title_tag = soup.find("title")
             title = title_tag.get_text(strip=True) if title_tag else None
             result = soup.get_text(separator="\n")
@@ -72,9 +81,8 @@ def _try_beautifulsoup() -> list[RenderEngine]:
 
 
 def _try_markdownify() -> list[RenderEngine]:
-    try:
-        import markdownify as _md  # type: ignore[import-untyped]
-    except ImportError:
+    markdownify = import_optional_module("markdownify")
+    if markdownify is None:
         return []
 
     class MarkdownifyRenderer:
@@ -90,16 +98,15 @@ def _try_markdownify() -> list[RenderEngine]:
             encoding: str | None = None,
         ) -> RenderedDocument:
             text, _ = decode_bytes(html_bytes, encoding)
-            result = _md.markdownify(text)
+            result = cast(Any, markdownify).markdownify(text)
             return RenderedDocument(title=None, text=result.strip())
 
     return [MarkdownifyRenderer()]
 
 
 def _try_inscriptis() -> list[RenderEngine]:
-    try:
-        from inscriptis import get_text  # type: ignore[import-untyped]
-    except ImportError:
+    inscriptis = import_optional_module("inscriptis")
+    if inscriptis is None:
         return []
 
     class InscriptisRenderer:
@@ -115,7 +122,7 @@ def _try_inscriptis() -> list[RenderEngine]:
             encoding: str | None = None,
         ) -> RenderedDocument:
             text, _ = decode_bytes(html_bytes, encoding)
-            result = get_text(text)
+            result = cast(Any, inscriptis).get_text(text)
             return RenderedDocument(title=None, text=result.strip())
 
     return [InscriptisRenderer()]

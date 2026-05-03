@@ -1,5 +1,6 @@
 """Smoke tests for the CLI entry point."""
 
+import importlib
 from typing import Protocol
 
 import pytest
@@ -25,9 +26,8 @@ def test_import() -> None:
 
 def test_viewer_module_imports() -> None:
     """The viewer module should import without evaluating unsupported tkinter generics."""
-    from urllib_gui.ui.viewer import HypertextViewer
-
-    assert HypertextViewer.__name__ == "HypertextViewer"
+    viewer_module = importlib.import_module("urllib_gui.ui.viewer")
+    assert viewer_module.HypertextViewer.__name__ == "HypertextViewer"
 
 
 def test_version() -> None:

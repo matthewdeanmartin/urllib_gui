@@ -5,13 +5,10 @@ from __future__ import annotations
 import tkinter as tk
 import urllib.parse
 from collections.abc import Callable
+from functools import partial
 from tkinter import ttk
-from typing import TYPE_CHECKING
 
-from urllib_gui.model import AuthSpec, RequestSpec
-
-if TYPE_CHECKING:
-    pass
+from urllib_gui.model import AuthSpec, RequestSpec, format_request_preview
 
 HTTP_METHODS = ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "Custom..."]
 
@@ -48,7 +45,7 @@ REDIRECT_OPTIONS = ["Follow redirects", "Do not follow"]
 AUTH_SCHEMES = ["None", "Basic", "Bearer", "Custom header"]
 
 
-class HeadersEditor(ttk.Frame):
+class HeadersEditor(ttk.Frame):  # pylint: disable=too-many-ancestors
     """Editable table of request headers with enable/disable checkboxes."""
 
     def __init__(self, master: tk.Misc) -> None:
@@ -67,7 +64,7 @@ class HeadersEditor(ttk.Frame):
         for preset_name in HEADER_PRESETS:
             presets_menu.add_command(
                 label=preset_name,
-                command=lambda n=preset_name: self.apply_preset(n),
+                command=partial(self.apply_preset, preset_name),
             )
         presets_menu.add_separator()
         presets_menu.add_command(label="Clear all", command=self.clear_rows)
@@ -107,7 +104,7 @@ class HeadersEditor(ttk.Frame):
             row_frame,
             text="x",
             width=2,
-            command=lambda i=idx: self.remove_row(i),
+            command=partial(self.remove_row, idx),
         ).pack(side="left", padx=(4, 0))
 
     def remove_row(self, index: int) -> None:
@@ -144,7 +141,7 @@ class HeadersEditor(ttk.Frame):
             self.add_row(enabled=True, name=name, value=value)
 
 
-class BodyEditor(ttk.Frame):
+class BodyEditor(ttk.Frame):  # pylint: disable=too-many-ancestors
     """Body editor with type selector and text area."""
 
     def __init__(self, master: tk.Misc) -> None:
@@ -177,11 +174,8 @@ class BodyEditor(ttk.Frame):
             return None
         body_type = self.body_type_var.get()
         if body_type == "form-urlencoded":
-            try:
-                pairs = urllib.parse.parse_qsl(raw, keep_blank_values=True)
-                return urllib.parse.urlencode(pairs).encode()
-            except Exception:
-                return raw.encode("utf-8", errors="replace")
+            pairs = urllib.parse.parse_qsl(raw, keep_blank_values=True)
+            return urllib.parse.urlencode(pairs).encode()
         return raw.encode("utf-8", errors="replace")
 
     def get_content_type_header(self) -> tuple[str, str] | None:
@@ -198,7 +192,7 @@ class BodyEditor(ttk.Frame):
             self.text.insert("1.0", body.decode("utf-8", errors="replace"))
 
 
-class RequestDrawer(ttk.Frame):
+class RequestDrawer(ttk.Frame):  # pylint: disable=too-many-ancestors
     """Collapsible expanded request configuration panel."""
 
     def __init__(
@@ -428,8 +422,6 @@ class RequestDrawer(ttk.Frame):
 
     def _refresh_preview(self) -> None:
         spec = self.build_request_spec()
-        from urllib_gui.model import format_request_preview
-
         preview = format_request_preview(spec)
         self.preview_text.configure(state="normal")
         self.preview_text.delete("1.0", "end")

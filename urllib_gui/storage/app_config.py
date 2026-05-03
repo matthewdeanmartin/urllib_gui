@@ -7,6 +7,8 @@ from pathlib import Path
 
 from urllib_gui.storage.config import ensure_config_dir
 
+EMPTY_SETTING = ""
+
 _DEFAULTS: dict[str, dict[str, str]] = {
     "network": {
         "timeout": "30",
@@ -14,7 +16,7 @@ _DEFAULTS: dict[str, dict[str, str]] = {
         "cookies_enabled": "true",
         "verify_tls": "true",
         "proxy_mode": "Environment",
-        "proxy_url": "",
+        "proxy_url": EMPTY_SETTING,
     },
     "rendering": {
         "default_engine": "stdlib_html_links",
@@ -28,8 +30,8 @@ _DEFAULTS: dict[str, dict[str, str]] = {
     },
     "auth": {
         "default_scheme": "None",
-        "default_username": "",
-        "default_token": "",
+        "default_username": EMPTY_SETTING,
+        "default_token": EMPTY_SETTING,
     },
 }
 

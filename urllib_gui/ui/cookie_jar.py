@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 import tkinter as tk
 from http.cookiejar import CookieJar
 from tkinter import messagebox, ttk
@@ -78,8 +79,6 @@ class CookieJarDialog(tk.Toplevel):
             domain = cookie.domain or ""
             if query and query not in domain.lower():
                 continue
-            import time
-
             expires_str = ""
             if cookie.expires is not None:
                 try:

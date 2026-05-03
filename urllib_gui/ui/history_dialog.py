@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import tkinter as tk
-from tkinter import messagebox, ttk
 from collections.abc import Callable
+from tkinter import messagebox, ttk
 
+from urllib_gui.model import HistoryEntry
 from urllib_gui.storage.history import HistoryStore
 
 
@@ -77,7 +78,7 @@ class HistoryDialog(tk.Toplevel):
 
         self._sort_col = "visited"
         self._sort_reverse = True
-        self._entries: list = []
+        self._entries: list[HistoryEntry] = []
 
     def _populate(self) -> None:
         self._tree.delete(*self._tree.get_children())

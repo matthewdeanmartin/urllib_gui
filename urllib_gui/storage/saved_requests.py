@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
 from urllib_gui.model import AuthSpec, RequestSpec, utc_now
+from urllib_gui.storage.config import ensure_config_dir
 
 
 @dataclass
@@ -22,8 +24,9 @@ class SavedRequest:
     tags: list[str] = field(default_factory=list)
 
 
-def _spec_to_json(spec: RequestSpec) -> str:
-    data: dict = {
+def spec_to_json(spec: RequestSpec) -> str:
+    """Serialize a request spec to JSON for persistent storage."""
+    data: dict[str, object] = {
         "url": spec.url,
         "method": spec.method,
         "headers": list(spec.headers),
@@ -47,34 +50,83 @@ def _spec_to_json(spec: RequestSpec) -> str:
     return json.dumps(data)
 
 
-def _json_to_spec(text: str) -> RequestSpec:
-    data = json.loads(text)
+def json_to_spec(text: str) -> RequestSpec:
+    """Deserialize a request spec from persisted JSON."""
+    loaded = json.loads(text)
+    if not isinstance(loaded, dict):
+        raise ValueError("Saved request payload must be a JSON object.")
+
     auth = None
-    if data.get("auth"):
-        auth = AuthSpec(**data["auth"])
-    body_raw = data.get("body")
+    auth_raw = loaded.get("auth")
+    if auth_raw is not None:
+        if not isinstance(auth_raw, dict):
+            raise ValueError("Saved auth payload must be a JSON object.")
+        auth = AuthSpec(
+            scheme=str(auth_raw.get("scheme", "")),
+            username=_optional_string(auth_raw.get("username")),
+            password=_optional_string(auth_raw.get("password")),
+            token=_optional_string(auth_raw.get("token")),
+            header_value=_optional_string(auth_raw.get("header_value")),
+        )
+
+    headers = list(parse_headers(loaded.get("headers", [])))
+    url = loaded.get("url")
+    if not isinstance(url, str):
+        raise ValueError("Saved request payload is missing a string URL.")
+    body_raw = loaded.get("body")
+    if body_raw is not None and not isinstance(body_raw, str):
+        raise ValueError("Saved request body must be a string or null.")
     body = body_raw.encode("latin-1") if body_raw is not None else None
     return RequestSpec(
-        url=data["url"],
-        method=data.get("method", "GET"),
-        headers=[tuple(h) for h in data.get("headers", [])],  # type: ignore[misc]
+        url=url,
+        method=str(loaded.get("method", "GET")),
+        headers=headers,
         body=body,
-        timeout=data.get("timeout"),
-        follow_redirects=data.get("follow_redirects", True),
-        verify_tls=data.get("verify_tls", True),
-        proxy=data.get("proxy"),
-        user_agent=data.get("user_agent"),
-        cookies_enabled=data.get("cookies_enabled", True),
+        timeout=parse_timeout(loaded.get("timeout")),
+        follow_redirects=bool(loaded.get("follow_redirects", True)),
+        verify_tls=bool(loaded.get("verify_tls", True)),
+        proxy=_optional_string(loaded.get("proxy")),
+        user_agent=_optional_string(loaded.get("user_agent")),
+        cookies_enabled=bool(loaded.get("cookies_enabled", True)),
         auth=auth,
     )
+
+
+def _optional_string(value: object) -> str | None:
+    """Normalize an optional string value loaded from JSON."""
+    if value is None:
+        return None
+    if isinstance(value, str):
+        return value
+    raise ValueError("Expected a string or null value.")
+
+
+def parse_timeout(value: object) -> float | None:
+    """Normalize an optional timeout value loaded from JSON."""
+    if value is None:
+        return None
+    if isinstance(value, int | float):
+        return float(value)
+    raise ValueError("Timeout must be numeric or null.")
+
+
+def parse_headers(value: object) -> Iterable[tuple[str, str]]:
+    """Yield normalized header pairs from a JSON value."""
+    if not isinstance(value, list):
+        raise ValueError("Headers must be a list of name/value pairs.")
+    for header in value:
+        if not isinstance(header, list | tuple) or len(header) != 2:
+            raise ValueError("Each header must contain exactly two items.")
+        name, item_value = header
+        if not isinstance(name, str) or not isinstance(item_value, str):
+            raise ValueError("Header names and values must be strings.")
+        yield name, item_value
 
 
 class SavedRequestStore:
     """SQLite-backed store for named request templates."""
 
     def __init__(self, db_path: Path | None = None) -> None:
-        from urllib_gui.storage.config import ensure_config_dir
-
         self._path = db_path or (ensure_config_dir() / "saved_requests.sqlite3")
         self._initialize()
 
@@ -112,7 +164,7 @@ class SavedRequestStore:
                 """,
                 (
                     saved.name,
-                    _spec_to_json(saved.spec),
+                    spec_to_json(saved.spec),
                     json.dumps(saved.tags),
                     saved.created_at.isoformat(),
                     now,
@@ -133,18 +185,23 @@ class SavedRequestStore:
         results = []
         for row in rows:
             try:
-                spec = _json_to_spec(row["spec_json"])
-                results.append(
-                    SavedRequest(
-                        name=row["name"],
-                        spec=spec,
-                        tags=json.loads(row["tags"]),
-                        created_at=datetime.fromisoformat(row["created_at"]),
-                        updated_at=datetime.fromisoformat(row["updated_at"]),
-                    )
-                )
-            except Exception:  # pylint: disable=broad-except
+                spec = json_to_spec(row["spec_json"])
+                tags_raw = json.loads(row["tags"])
+                if not isinstance(tags_raw, list) or not all(isinstance(tag, str) for tag in tags_raw):
+                    continue
+                created_at = datetime.fromisoformat(row["created_at"])
+                updated_at = datetime.fromisoformat(row["updated_at"])
+            except (IndexError, KeyError, TypeError, ValueError, json.JSONDecodeError):
                 continue
+            results.append(
+                SavedRequest(
+                    name=row["name"],
+                    spec=spec,
+                    tags=tags_raw,
+                    created_at=created_at,
+                    updated_at=updated_at,
+                )
+            )
         return results
 
     def delete(self, name: str) -> None:

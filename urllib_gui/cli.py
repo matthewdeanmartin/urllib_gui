@@ -6,6 +6,7 @@ import argparse
 from collections.abc import Sequence
 
 from urllib_gui.__about__ import __version__
+from urllib_gui.app import run
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -26,8 +27,6 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: Sequence[str] | None = None) -> None:
     """Run the urllib_gui CLI."""
-    from urllib_gui.app import run
-
     parser = build_parser()
     args = parser.parse_args(argv)
     run(initial_url=args.url, theme=args.theme)
