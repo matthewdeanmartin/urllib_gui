@@ -2,8 +2,7 @@
 site_name: urllib_gui
 site_url: https://urllib_gui.readthedocs.io/
 site_author: Matthew Martin <matthewdeanmartin@gmail.com>
-site_description: A gui for urllib. Something between curl and postman and a browser.
-  Almost all stdlib
+site_description: A small Tkinter desktop client for urllib with text rendering, request editing, and export tools.
 repo_url: https://github.com/matthewdeanmartin/urllib_gui
 theme:
   name: readthedocs
@@ -15,13 +14,13 @@ markdown_extensions:
   - toc:
       permalink: true
 nav:
-  - Overview:
-      - Readme.md: overview/README.md
+  - Home: index.md
   - Installation: installation.md
   - Usage:
       - Quick Start: usage/quickstart.md
+      - Request Workflows: usage/request-workflows.md
   - Contributing: extending/CONTRIBUTING.md
-  - Change Log: CHANGELOG.md
+  - Changelog: changelog.md
 validation:
   nav:
     omitted_files: warn
