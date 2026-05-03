@@ -27,7 +27,7 @@ from urllib_gui.model import (
 )
 from urllib_gui.render import built_in_renderers, choose_default_engine_name
 from urllib_gui.storage import BookmarkStore, HistoryStore
-from urllib_gui.ui import HypertextViewer
+from urllib_gui.ui import HypertextViewer, RequestDrawer
 
 VIEW_MODES = ("Rendered", "Source", "Headers", "Request")
 
@@ -76,6 +76,7 @@ class MainWindow(tk.Tk):
         self.theme_var = tk.StringVar(value=theme if theme in THEMES else "light")
         self.build_menu()
         self.build_toolbar()
+        self.build_drawer()
         self.build_notebook()
         self.build_statusbar()
         self.bind_shortcuts()
@@ -126,6 +127,7 @@ class MainWindow(tk.Tk):
 
         view_menu = tk.Menu(menu_bar, tearoff=False)
         view_menu.add_command(label="Reload", accelerator="Ctrl+R", command=self.reload_current_tab)
+        view_menu.add_command(label="Toggle Request Options", command=self._toggle_drawer)
         view_menu.add_separator()
         for mode in VIEW_MODES:
             view_menu.add_radiobutton(
@@ -192,6 +194,17 @@ class MainWindow(tk.Tk):
         )
         self.engine_combo.pack(side="left", padx=(8, 0))
         self.engine_combo.bind("<<ComboboxSelected>>", lambda _event: self.change_engine())
+
+    def build_drawer(self) -> None:
+        """Build the collapsible expanded request drawer."""
+        self.request_drawer = RequestDrawer(self, on_submit=self._on_drawer_submit)
+        self.request_drawer.pack(fill="x")
+
+    def _on_drawer_submit(self, spec: RequestSpec) -> None:
+        """Handle Send Request from the drawer."""
+        tab = self.current_tab
+        self.url_var.set(spec.url)
+        self.load_request(tab, spec, push_history=True)
 
     def build_notebook(self) -> None:
         """Build the tabbed content area."""
@@ -278,7 +291,11 @@ class MainWindow(tk.Tk):
             messagebox.showwarning("Unsupported scheme", f"Unsupported URL scheme: {parsed.scheme}")
             return
         tab = self.new_tab(RequestSpec(url=normalized)) if new_tab else self.current_tab
-        request = RequestSpec(url=normalized)
+        if self.request_drawer._visible:
+            self.request_drawer.url_var.set(normalized)
+            request = self.request_drawer.build_request_spec()
+        else:
+            request = RequestSpec(url=normalized)
         self.load_request(tab, request, push_history=push_history)
 
     def open_link(self, href: str, new_tab: bool) -> None:
@@ -502,7 +519,10 @@ class MainWindow(tk.Tk):
             entry = history_entry_from_response(request, response, title=tab.state.title)
             self.history_store.add_entry(entry)
         if tab is self.current_tab:
-            self.url_var.set(response.final_url if response.final_url else request.normalized_url())
+            final = response.final_url if response.final_url else request.normalized_url()
+            self.url_var.set(final)
+            if self.request_drawer._visible:
+                self.request_drawer.url_var.set(final)
         self.display_tab(tab)
         status_code = response.status if response.status is not None else "ERR"
         content_type = response.content_type or "unknown"
@@ -618,6 +638,16 @@ class MainWindow(tk.Tk):
         """Sync toolbar controls from tab state."""
         self.url_var.set(tab.state.request.normalized_url())
         self.engine_var.set(tab.state.render_engine_name)
+        if self.request_drawer._visible:
+            self.request_drawer.populate_from_spec(tab.state.request)
+
+    def _toggle_drawer(self) -> None:
+        """Toggle the request options drawer."""
+        if self.request_drawer._visible:
+            self.request_drawer.hide()
+        else:
+            self.request_drawer.url_var.set(self.url_var.get())
+            self.request_drawer.show()
 
     def set_hover_status(self, href: str | None) -> None:
         """Update the status bar while hovering links."""

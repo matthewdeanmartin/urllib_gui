@@ -1,11 +1,15 @@
 """Smoke tests for the CLI entry point."""
 
+import importlib
 from typing import Protocol
+
+import pytest
 
 import urllib_gui
 from urllib_gui import cli
 from urllib_gui.__about__ import __version__
-from urllib_gui.ui.viewer import HypertextViewer
+
+tkinter = pytest.importorskip("tkinter", reason="tkinter not available")
 
 
 class MonkeyPatchLike(Protocol):
@@ -22,6 +26,8 @@ def test_import() -> None:
 
 def test_viewer_module_imports() -> None:
     """The viewer module should import without evaluating unsupported tkinter generics."""
+    from urllib_gui.ui.viewer import HypertextViewer
+
     assert HypertextViewer.__name__ == "HypertextViewer"
 
 

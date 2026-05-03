@@ -73,7 +73,10 @@ class UrllibClient:
         handlers: list[urllib.request.BaseHandler] = []
         if spec.cookies_enabled:
             handlers.append(urllib.request.HTTPCookieProcessor(self.cookie_jar))
-        if spec.proxy is not None:
+        if spec.proxy == "":
+            # Empty string means "no proxy" — bypass all system proxies.
+            handlers.append(urllib.request.ProxyHandler({}))
+        elif spec.proxy is not None:
             handlers.append(urllib.request.ProxyHandler({"http": spec.proxy, "https": spec.proxy}))
         if not spec.follow_redirects:
             handlers.append(NoRedirectHandler())
