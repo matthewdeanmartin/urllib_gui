@@ -5,7 +5,7 @@ from __future__ import annotations
 import tkinter as tk
 from http.cookiejar import CookieJar
 from tkinter import messagebox, ttk
-from typing import Callable
+from collections.abc import Callable
 
 
 class CookieJarDialog(tk.Toplevel):

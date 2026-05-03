@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import tkinter as tk
 from tkinter import messagebox, ttk
-from typing import Callable
+from collections.abc import Callable
 
 from urllib_gui.storage.app_config import AppConfig
 
@@ -89,7 +89,9 @@ class PreferencesDialog(tk.Toplevel):
 
         self._user_agent_var = tk.StringVar()
         self._row(tab, "Default User-Agent:", 1)
-        ttk.Entry(tab, textvariable=self._user_agent_var, width=36).grid(row=1, column=1, columnspan=2, sticky="ew", pady=4)
+        ttk.Entry(tab, textvariable=self._user_agent_var, width=36).grid(
+            row=1, column=1, columnspan=2, sticky="ew", pady=4
+        )
 
         self._cookies_var = tk.BooleanVar()
         self._row(tab, "Enable cookies:", 2)
@@ -115,9 +117,9 @@ class PreferencesDialog(tk.Toplevel):
 
         self._proxy_mode_var = tk.StringVar()
         self._row(tab, "Proxy mode:", 0)
-        ttk.Combobox(
-            tab, values=_PROXY_MODES, textvariable=self._proxy_mode_var, state="readonly", width=16
-        ).grid(row=0, column=1, sticky="w", pady=4)
+        ttk.Combobox(tab, values=_PROXY_MODES, textvariable=self._proxy_mode_var, state="readonly", width=16).grid(
+            row=0, column=1, sticky="w", pady=4
+        )
         self._proxy_mode_var.trace_add("write", lambda *_: self._on_proxy_mode_changed())
 
         self._proxy_url_var = tk.StringVar()
@@ -151,9 +153,9 @@ class PreferencesDialog(tk.Toplevel):
 
         self._auth_scheme_var = tk.StringVar()
         self._row(tab, "Auth scheme:", 1)
-        ttk.Combobox(
-            tab, values=_AUTH_SCHEMES, textvariable=self._auth_scheme_var, state="readonly", width=16
-        ).grid(row=1, column=1, sticky="w", pady=4)
+        ttk.Combobox(tab, values=_AUTH_SCHEMES, textvariable=self._auth_scheme_var, state="readonly", width=16).grid(
+            row=1, column=1, sticky="w", pady=4
+        )
         self._auth_scheme_var.trace_add("write", lambda *_: self._on_auth_changed())
 
         self._auth_username_var = tk.StringVar()

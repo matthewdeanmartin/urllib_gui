@@ -6,8 +6,8 @@ import json
 import tkinter as tk
 from datetime import UTC, datetime
 from pathlib import Path
-from tkinter import filedialog, messagebox, simpledialog, ttk
-from typing import Callable
+from tkinter import filedialog, messagebox, ttk
+from collections.abc import Callable
 
 from urllib_gui.model import Bookmark
 from urllib_gui.storage.bookmarks import BookmarkStore
@@ -268,9 +268,9 @@ class BookmarksDialog(tk.Toplevel):
                     url=entry["url"],
                     tags=entry.get("tags", []),
                     notes=entry.get("notes"),
-                    created_at=datetime.fromisoformat(entry["created_at"])
-                    if "created_at" in entry
-                    else datetime.now(UTC),
+                    created_at=(
+                        datetime.fromisoformat(entry["created_at"]) if "created_at" in entry else datetime.now(UTC)
+                    ),
                 )
                 self._store.add(bm)
                 count += 1

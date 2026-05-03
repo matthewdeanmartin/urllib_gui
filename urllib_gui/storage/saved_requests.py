@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import json
 import sqlite3
-from dataclasses import asdict, dataclass, field
-from datetime import UTC, datetime
+from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 
 from urllib_gui.model import AuthSpec, RequestSpec, utc_now
@@ -85,8 +85,7 @@ class SavedRequestStore:
 
     def _initialize(self) -> None:
         with self._connect() as conn:
-            conn.execute(
-                """
+            conn.execute("""
                 CREATE TABLE IF NOT EXISTS saved_requests (
                     id INTEGER PRIMARY KEY,
                     name TEXT NOT NULL UNIQUE,
@@ -95,8 +94,7 @@ class SavedRequestStore:
                     created_at TEXT NOT NULL,
                     updated_at TEXT NOT NULL
                 )
-                """
-            )
+                """)
             conn.commit()
 
     def save(self, saved: SavedRequest) -> None:
@@ -131,9 +129,7 @@ class SavedRequestStore:
                     (f"%{query}%",),
                 ).fetchall()
             else:
-                rows = conn.execute(
-                    "SELECT * FROM saved_requests ORDER BY updated_at DESC"
-                ).fetchall()
+                rows = conn.execute("SELECT * FROM saved_requests ORDER BY updated_at DESC").fetchall()
         results = []
         for row in rows:
             try:

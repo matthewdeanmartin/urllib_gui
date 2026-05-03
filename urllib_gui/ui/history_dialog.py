@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import tkinter as tk
 from tkinter import messagebox, ttk
-from typing import Callable
+from collections.abc import Callable
 
 from urllib_gui.storage.history import HistoryStore
 

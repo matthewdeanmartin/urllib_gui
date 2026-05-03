@@ -1,6 +1,5 @@
 """Smoke tests for the CLI entry point."""
 
-import importlib
 from typing import Protocol
 
 import pytest

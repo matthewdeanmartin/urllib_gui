@@ -386,9 +386,7 @@ class RequestDrawer(ttk.Frame):
 
         self.auth_basic_frame = ttk.Frame(tab)
         ttk.Label(self.auth_basic_frame, text="Username:", width=16, anchor="e").pack(side="left")
-        ttk.Entry(self.auth_basic_frame, textvariable=self.auth_username_var, width=24).pack(
-            side="left", padx=(4, 0)
-        )
+        ttk.Entry(self.auth_basic_frame, textvariable=self.auth_username_var, width=24).pack(side="left", padx=(4, 0))
         ttk.Label(self.auth_basic_frame, text="Password:").pack(side="left", padx=(8, 0))
         ttk.Entry(self.auth_basic_frame, textvariable=self.auth_password_var, width=24, show="*").pack(
             side="left", padx=(4, 0)

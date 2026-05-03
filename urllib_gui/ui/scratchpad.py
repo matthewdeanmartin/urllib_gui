@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import tkinter as tk
 from tkinter import messagebox, simpledialog, ttk
-from typing import Callable
+from collections.abc import Callable
 
 from urllib_gui.model import RequestSpec
 from urllib_gui.storage.saved_requests import SavedRequest, SavedRequestStore
@@ -115,9 +115,7 @@ class ScratchpadDialog(tk.Toplevel):
     def _save_current(self) -> None:
         if self._current_spec is None:
             return
-        name = simpledialog.askstring(
-            "Save Request", "Name for this request:", parent=self
-        )
+        name = simpledialog.askstring("Save Request", "Name for this request:", parent=self)
         if not name or not name.strip():
             return
         name = name.strip()
@@ -137,9 +135,7 @@ class ScratchpadDialog(tk.Toplevel):
         old_name = self._selected_name()
         if old_name is None:
             return
-        new_name = simpledialog.askstring(
-            "Rename", f"New name for '{old_name}':", initialvalue=old_name, parent=self
-        )
+        new_name = simpledialog.askstring("Rename", f"New name for '{old_name}':", initialvalue=old_name, parent=self)
         if not new_name or not new_name.strip() or new_name.strip() == old_name:
             return
         self._store.rename(old_name, new_name.strip())

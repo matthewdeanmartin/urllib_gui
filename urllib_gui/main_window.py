@@ -27,7 +27,15 @@ from urllib_gui.model import (
 )
 from urllib_gui.render import built_in_renderers, choose_default_engine_name
 from urllib_gui.storage import AppConfig, BookmarkStore, HistoryStore, SavedRequest, SavedRequestStore
-from urllib_gui.ui import BookmarksDialog, CookieJarDialog, HistoryDialog, HypertextViewer, PreferencesDialog, RequestDrawer, ScratchpadDialog
+from urllib_gui.ui import (
+    BookmarksDialog,
+    CookieJarDialog,
+    HistoryDialog,
+    HypertextViewer,
+    PreferencesDialog,
+    RequestDrawer,
+    ScratchpadDialog,
+)
 
 VIEW_MODES = ("Rendered", "Source", "Headers", "Request")
 
@@ -212,7 +220,9 @@ class MainWindow(tk.Tk):
         ttk.Button(toolbar, text="Forward", command=self.go_forward).pack(side="left", padx=(4, 0))
         ttk.Button(toolbar, text="Reload", command=self.reload_current_tab).pack(side="left", padx=(4, 8))
         self.method_label_var = tk.StringVar(value="GET")
-        self.method_indicator = ttk.Label(toolbar, textvariable=self.method_label_var, width=7, anchor="center", foreground="#666666")
+        self.method_indicator = ttk.Label(
+            toolbar, textvariable=self.method_label_var, width=7, anchor="center", foreground="#666666"
+        )
         self.method_indicator.pack(side="left")
         self.url_entry = ttk.Entry(toolbar, textvariable=self.url_var)
         self.url_entry.pack(side="left", fill="x", expand=True)
@@ -458,7 +468,6 @@ class MainWindow(tk.Tk):
 
     def save_request_to_file(self) -> None:
         """Export the current request spec to a JSON file."""
-        import json as _json
 
         spec = self.current_tab.state.request
         if not spec.url:
@@ -607,6 +616,7 @@ class MainWindow(tk.Tk):
         client = self.urllib_client
         started = time.perf_counter()
         future = self.fetch_executor.submit(client.fetch, request)
+
         # Marshal completion back to the Tk thread; the seq guard ignores stale results
         # from navigations the user has since superseded.
         def bounce(fut: Future[ResponseRecord]) -> None:
@@ -860,9 +870,11 @@ class MainWindow(tk.Tk):
             b"test".decode(enc)
         except LookupError:
             from tkinter import messagebox
+
             messagebox.showerror("Encoding Override", f"Unknown encoding: {enc}", parent=self)
             return
         import dataclasses
+
         tab.state.response = dataclasses.replace(tab.state.response, encoding=enc)
         self.render_current_response(tab)
         self.display_tab(tab)
