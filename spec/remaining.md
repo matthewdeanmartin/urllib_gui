@@ -14,10 +14,11 @@ These pieces are intentionally deferred:
 - Save/open affordances beyond the current basic file dialogs.
 
 - Bookmark import/export, bookmark tags/notes editing, and richer bookmark/history management views.
-- Proxy and authentication UI helpers.
-- Find-in-page, zoom controls, encoding override, and visited-link styling.
 - Preferences/config editor and persistent theme settings.
+- Proxy and authentication UI helpers.
+
+- Find-in-page, zoom controls, encoding override, and visited-link styling.
 - Optional third-party renderer plugins and engine discovery.
-- Better HTML fidelity for tables, blockquotes, code/pre formatting, and form rendering.
 - Async request loading, stop/cancel behavior, and redirect-chain inspection.
 - Non-GET request workflows in the UI, including JSON and form posting.
+- Better HTML fidelity for tables, blockquotes, code/pre formatting, and form rendering.

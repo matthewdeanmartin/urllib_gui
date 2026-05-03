@@ -13,7 +13,7 @@ from typing import cast
 from urllib.parse import urlparse
 
 from urllib_gui.client import UrllibClient
-from urllib_gui.export import generate_urllib_code
+from urllib_gui.export import generate_curl_command, generate_urllib_code
 from urllib_gui.model import (
     RenderedDocument,
     RequestSpec,
@@ -26,8 +26,8 @@ from urllib_gui.model import (
     normalize_url,
 )
 from urllib_gui.render import built_in_renderers, choose_default_engine_name
-from urllib_gui.storage import BookmarkStore, HistoryStore
-from urllib_gui.ui import HypertextViewer, RequestDrawer
+from urllib_gui.storage import AppConfig, BookmarkStore, HistoryStore, SavedRequest, SavedRequestStore
+from urllib_gui.ui import BookmarksDialog, CookieJarDialog, HistoryDialog, HypertextViewer, PreferencesDialog, RequestDrawer, ScratchpadDialog
 
 VIEW_MODES = ("Rendered", "Source", "Headers", "Request")
 
@@ -57,13 +57,15 @@ class BrowserTab:
 class MainWindow(tk.Tk):
     """Top-level urllib_gui application window."""
 
-    def __init__(self, *, initial_url: str | None = None, theme: str = "light") -> None:
+    def __init__(self, *, initial_url: str | None = None, theme: str | None = None) -> None:
         super().__init__()
         self.title("urllib_gui")
         self.geometry("1080x720")
+        self.app_config = AppConfig()
         self.urllib_client = UrllibClient()
         self.history_store = HistoryStore()
         self.bookmark_store = BookmarkStore()
+        self.saved_request_store = SavedRequestStore()
         self.renderers = built_in_renderers()
         self.tabs_by_id: dict[str, BrowserTab] = {}
         self.fetch_executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="urllib_gui-fetch")
@@ -72,8 +74,12 @@ class MainWindow(tk.Tk):
         self.status_var = tk.StringVar(value="Ready")
         self.url_var = tk.StringVar()
         self.view_mode_var = tk.StringVar(value="Rendered")
-        self.engine_var = tk.StringVar(value="stdlib_html_links")
-        self.theme_var = tk.StringVar(value=theme if theme in THEMES else "light")
+        effective_engine = self.app_config.default_engine
+        self.engine_var = tk.StringVar(value=effective_engine)
+        effective_theme = theme if theme in THEMES else self.app_config.theme
+        if effective_theme not in THEMES:
+            effective_theme = "light"
+        self.theme_var = tk.StringVar(value=effective_theme)
         self.build_menu()
         self.build_toolbar()
         self.build_drawer()
@@ -133,28 +139,44 @@ class MainWindow(tk.Tk):
             view_menu.add_radiobutton(
                 label=f"View {mode}", value=mode, variable=self.view_mode_var, command=self.refresh_view
             )
+        view_menu.add_separator()
         theme_menu = tk.Menu(view_menu, tearoff=False)
         for theme_name in THEMES:
             theme_menu.add_radiobutton(
-                label=theme_name.title(), value=theme_name, variable=self.theme_var, command=self.apply_theme
+                label=theme_name.title(), value=theme_name, variable=self.theme_var, command=self._on_theme_changed
             )
         view_menu.add_cascade(label="Theme", menu=theme_menu)
+        view_menu.add_command(label="Preferences…", command=self.show_preferences)
         menu_bar.add_cascade(label="View", menu=view_menu)
 
         history_menu = tk.Menu(menu_bar, tearoff=False)
         history_menu.add_command(label="Back", accelerator="Alt+Left", command=self.go_back)
         history_menu.add_command(label="Forward", accelerator="Alt+Right", command=self.go_forward)
-        history_menu.add_command(label="Show History", command=self.show_history_window)
+        history_menu.add_separator()
+        history_menu.add_command(label="Show History…", command=self.show_history_window)
         history_menu.add_command(label="Clear History", command=self.clear_history)
         menu_bar.add_cascade(label="History", menu=history_menu)
 
         bookmarks_menu = tk.Menu(menu_bar, tearoff=False)
         bookmarks_menu.add_command(label="Bookmark This Page", accelerator="Ctrl+D", command=self.bookmark_current_page)
-        bookmarks_menu.add_command(label="Show Bookmarks", command=self.show_bookmarks_window)
+        bookmarks_menu.add_command(label="Show Bookmarks…", command=self.show_bookmarks_window)
+        bookmarks_menu.add_separator()
+        bookmarks_menu.add_command(label="Import Bookmarks…", command=self._import_bookmarks)
+        bookmarks_menu.add_command(label="Export Bookmarks…", command=self._export_bookmarks)
         menu_bar.add_cascade(label="Bookmarks", menu=bookmarks_menu)
 
         tools_menu = tk.Menu(menu_bar, tearoff=False)
         tools_menu.add_command(label="Copy as urllib Code", command=self.copy_request_as_urllib)
+        tools_menu.add_command(label="Copy as curl", command=self.copy_request_as_curl)
+        tools_menu.add_separator()
+        tools_menu.add_command(label="Request Scratchpad…", command=self.show_scratchpad)
+        tools_menu.add_command(label="Save Request to Scratchpad…", command=self.save_request_to_scratchpad)
+        tools_menu.add_separator()
+        tools_menu.add_command(label="Save Request to File…", command=self.save_request_to_file)
+        tools_menu.add_command(label="Open Request from File…", command=self.open_request_from_file)
+        tools_menu.add_separator()
+        tools_menu.add_command(label="Cookie Jar…", command=self.show_cookie_jar)
+        tools_menu.add_separator()
         tools_menu.add_command(label="Open Current Page Externally", command=self.open_current_page_externally)
         menu_bar.add_cascade(label="Tools", menu=tools_menu)
 
@@ -183,6 +205,7 @@ class MainWindow(tk.Tk):
         ttk.Button(toolbar, text="Go", command=lambda: self.open_url(self.url_var.get())).pack(side="left", padx=(8, 0))
         ttk.Button(toolbar, text="Bookmark", command=self.bookmark_current_page).pack(side="left", padx=(8, 0))
         ttk.Button(toolbar, text="Copy urllib", command=self.copy_request_as_urllib).pack(side="left", padx=(8, 0))
+        ttk.Button(toolbar, text="Copy curl", command=self.copy_request_as_curl).pack(side="left", padx=(4, 0))
         self.view_combo = ttk.Combobox(
             toolbar, values=VIEW_MODES, state="readonly", textvariable=self.view_mode_var, width=10
         )
@@ -245,6 +268,12 @@ class MainWindow(tk.Tk):
                 foreground=colors["foreground"],
                 link_foreground=colors["link"],
             )
+
+    def _on_theme_changed(self) -> None:
+        """Persist theme change and re-apply."""
+        self.app_config.theme = self.theme_var.get()
+        self.app_config.save()
+        self.apply_theme()
 
     def new_tab(self, initial_request: RequestSpec | None = None) -> BrowserTab:
         """Create a new browser tab."""
@@ -353,6 +382,97 @@ class MainWindow(tk.Tk):
         self.clipboard_append(code)
         self.status_var.set("Copied request as urllib code.")
 
+    def copy_request_as_curl(self) -> None:
+        """Copy the current request as a curl command."""
+        cmd = generate_curl_command(self.current_tab.state.request)
+        self.clipboard_clear()
+        self.clipboard_append(cmd)
+        self.status_var.set("Copied request as curl command.")
+
+    def show_cookie_jar(self) -> None:
+        """Open the cookie jar inspection dialog."""
+        CookieJarDialog(
+            self,
+            self.urllib_client.cookie_jar,
+            on_changed=lambda: self.status_var.set("Cookie jar updated."),
+        )
+
+    def show_scratchpad(self) -> None:
+        """Open the request scratchpad dialog."""
+        tab = self.current_tab
+
+        def load_spec(spec: RequestSpec) -> None:
+            self.url_var.set(spec.url)
+            if self.request_drawer._visible:
+                self.request_drawer.populate_from_spec(spec)
+            self.load_request(tab, spec, push_history=True)
+
+        ScratchpadDialog(
+            self,
+            self.saved_request_store,
+            on_load=load_spec,
+            current_spec=tab.state.request if tab.state.request.url else None,
+        )
+
+    def save_request_to_scratchpad(self) -> None:
+        """Save the current request to the scratchpad with a name prompt."""
+        import tkinter.simpledialog as sd
+
+        spec = self.current_tab.state.request
+        if not spec.url:
+            messagebox.showinfo("Save Request", "No active request to save.", parent=self)
+            return
+        name = sd.askstring("Save to Scratchpad", "Name for this request:", parent=self)
+        if not name or not name.strip():
+            return
+        self.saved_request_store.save(SavedRequest(name=name.strip(), spec=spec))
+        self.status_var.set(f"Saved request as '{name.strip()}'.")
+
+    def save_request_to_file(self) -> None:
+        """Export the current request spec to a JSON file."""
+        import json as _json
+
+        spec = self.current_tab.state.request
+        if not spec.url:
+            messagebox.showinfo("Save Request", "No active request to save.", parent=self)
+            return
+        target = filedialog.asksaveasfilename(
+            parent=self,
+            title="Save Request as JSON",
+            defaultextension=".json",
+            filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
+        )
+        if not target:
+            return
+        from urllib_gui.storage.saved_requests import _spec_to_json
+
+        Path(target).write_text(_spec_to_json(spec), encoding="utf-8")
+        self.status_var.set(f"Request saved to {target}")
+
+    def open_request_from_file(self) -> None:
+        """Load a previously exported request spec from a JSON file."""
+        filename = filedialog.askopenfilename(
+            parent=self,
+            title="Open Request JSON",
+            filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
+        )
+        if not filename:
+            return
+        from urllib_gui.storage.saved_requests import _json_to_spec
+
+        try:
+            text = Path(filename).read_text(encoding="utf-8")
+            spec = _json_to_spec(text)
+        except Exception as exc:  # pylint: disable=broad-except
+            messagebox.showerror("Open Request", f"Could not read request file:\n{exc}", parent=self)
+            return
+        tab = self.current_tab
+        self.url_var.set(spec.url)
+        if self.request_drawer._visible:
+            self.request_drawer.populate_from_spec(spec)
+        self.load_request(tab, spec, push_history=True)
+        self.status_var.set(f"Loaded request from {filename}")
+
     def open_current_page_externally(self) -> None:
         """Open the current page in the default browser."""
         tab = self.current_tab
@@ -398,48 +518,51 @@ class MainWindow(tk.Tk):
         self.history_store.clear()
         self.status_var.set("History cleared.")
 
+    def _open_url_positional(self, url: str, new_tab: bool) -> None:
+        """Adapter for dialog on_open callbacks that pass new_tab positionally."""
+        self.open_url(url, new_tab=new_tab)
+
     def show_history_window(self) -> None:
-        """Show the browsing history window."""
-        self.show_url_list_window("History", [entry.url for entry in self.history_store.list_entries()])
+        """Show the rich browsing history dialog."""
+        HistoryDialog(
+            self,
+            self.history_store,
+            on_open=self._open_url_positional,
+            on_cleared=lambda: self.status_var.set("History cleared."),
+        )
 
     def show_bookmarks_window(self) -> None:
-        """Show the bookmarks window."""
-        self.show_url_list_window("Bookmarks", [bookmark.url for bookmark in self.bookmark_store.list_bookmarks()])
-
-    def show_url_list_window(self, title: str, urls: list[str]) -> None:
-        """Show a searchable list of URLs."""
-        window = tk.Toplevel(self)
-        window.title(title)
-        window.geometry("640x360")
-        search_var = tk.StringVar()
-        ttk.Label(window, text="Search").pack(anchor="w", padx=8, pady=(8, 0))
-        search_entry = ttk.Entry(window, textvariable=search_var)
-        search_entry.pack(fill="x", padx=8, pady=(0, 8))
-        listbox = tk.Listbox(window)
-        listbox.pack(fill="both", expand=True, padx=8, pady=(0, 8))
-
-        def populate() -> None:
-            query = search_var.get().lower()
-            listbox.delete(0, "end")
-            for url in urls:
-                if not query or query in url.lower():
-                    listbox.insert("end", url)
-
-        def open_selected(*, in_new_tab: bool) -> None:
-            selection = tuple(listbox.curselection())  # type: ignore[no-untyped-call]
-            if not selection:
-                return
-            self.open_url(listbox.get(selection[0]), new_tab=in_new_tab)
-
-        search_var.trace_add("write", lambda *_args: populate())
-        listbox.bind("<Double-Button-1>", lambda _event: open_selected(in_new_tab=False))
-        button_row = ttk.Frame(window)
-        button_row.pack(fill="x", padx=8, pady=(0, 8))
-        ttk.Button(button_row, text="Open", command=lambda: open_selected(in_new_tab=False)).pack(side="left")
-        ttk.Button(button_row, text="Open in New Tab", command=lambda: open_selected(in_new_tab=True)).pack(
-            side="left", padx=(8, 0)
+        """Show the rich bookmarks management dialog."""
+        BookmarksDialog(
+            self,
+            self.bookmark_store,
+            on_open=self._open_url_positional,
         )
-        populate()
+
+    def _import_bookmarks(self) -> None:
+        """Open the bookmarks dialog focused on import."""
+        dlg = BookmarksDialog(self, self.bookmark_store, on_open=self._open_url_positional)
+        dlg._import()
+
+    def _export_bookmarks(self) -> None:
+        """Open the bookmarks dialog focused on export."""
+        dlg = BookmarksDialog(self, self.bookmark_store, on_open=self._open_url_positional)
+        dlg._export()
+
+    def show_preferences(self) -> None:
+        """Open the preferences dialog."""
+        PreferencesDialog(self, self.app_config, on_apply=self._on_prefs_applied)
+
+    def _on_prefs_applied(self, config: AppConfig) -> None:
+        """React to preferences being saved — update live UI state."""
+        new_theme = config.theme
+        if new_theme in THEMES and new_theme != self.theme_var.get():
+            self.theme_var.set(new_theme)
+            self.apply_theme()
+        new_engine = config.default_engine
+        if new_engine in self.renderers:
+            self.engine_var.set(new_engine)
+        self.status_var.set("Preferences saved.")
 
     def load_request(self, tab: BrowserTab, request: RequestSpec, *, push_history: bool) -> None:
         """Load a request into a tab off the UI thread."""

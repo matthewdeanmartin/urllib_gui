@@ -63,6 +63,15 @@ class HistoryStore:
             for row in rows
         ]
 
+    def delete_entry(self, url: str, visited_at: datetime) -> None:
+        """Delete a single history entry identified by url + timestamp."""
+        with sqlite3.connect(self.path) as connection:
+            connection.execute(
+                "DELETE FROM history WHERE url = ? AND visited_at = ?",
+                (url, visited_at.isoformat()),
+            )
+            connection.commit()
+
     def clear(self) -> None:
         """Delete all history entries."""
         with sqlite3.connect(self.path) as connection:
