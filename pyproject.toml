@@ -6,14 +6,13 @@ readme = "README.md"
 authors = [{ name = "Matthew Martin", email = "matthewdeanmartin@gmail.com" }]
 keywords = ["urllib_gui"]
 license = "MIT"
-requires-python = ">=3.13"
+requires-python = ">=3.14"
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python",
-    "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
 ]
 dependencies = []
@@ -46,6 +45,9 @@ include = ["/README.md", "LICENSE", "/urllib_gui", "/tests"]
 
 [dependency-groups]
 dev = [
+    "dont-be-lazy>=0.1.2",
+    "pydoc-fork>=3.0.0",
+
     "bandit>=1.9.4",
     "black>=26.0.0",
     "isort>=6.0.0",
@@ -135,7 +137,7 @@ py_version = 313
 skip_gitignore = true
 
 [tool.mypy]
-python_version = "3.13"
+python_version = "3.14"
 strict = true
 packages = ["urllib_gui", "tests"]
 
