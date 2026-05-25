@@ -7,8 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.1.0] - 2026-04-26
+## [0.1.0] - 2026-05-03
 
 ### Added
 
-- Initial release
+- Initial release with urllib GUI functionality
+- Request panel
+- Bookmarks support
+- Plugins support
+- Background worker thread
+
+[0.1.0]: https://github.com/matthewdeanmartin/urllib_gui/releases/tag/v0.1.0
