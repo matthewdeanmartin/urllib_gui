@@ -1,3 +1,6 @@
+import tkinter as tk
+import webbrowser
+
 
 def insert_link(text, label, url):
     tag = f"link_{url}"
