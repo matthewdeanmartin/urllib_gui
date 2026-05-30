@@ -169,16 +169,24 @@ From the Preferences dialog you can change theme, font settings, link-opening be
 
 ## Documentation
 
-Project docs live in [`docs/`](docs/) and are built with MkDocs for Read the Docs. The docs cover installation, day-to-day usage, request workflows, and contributing.
+Project docs live in [`docs/`](https://github.com/matthewdeanmartin/urllib_gui/tree/main/docs/) and are built with MkDocs for Read the Docs. The docs cover installation, day-to-day usage, request workflows, and contributing.
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the local workflow, quality gates, and how CI is wired.
+See [CONTRIBUTING.md](https://github.com/matthewdeanmartin/urllib_gui/blob/main/CONTRIBUTING.md) for the local workflow, quality gates, and how CI is wired.
 
 ## License
 
-MIT - see [LICENSE](LICENSE).
+MIT - see [LICENSE](https://github.com/matthewdeanmartin/urllib_gui/blob/main/LICENSE).
 
 ## Changelog
 
-See [CHANGELOG.md](CHANGELOG.md).
+See [CHANGELOG.md](https://github.com/matthewdeanmartin/urllib_gui/blob/main/CHANGELOG.md).
+
+## Project Links
+
+- [GitHub](https://github.com/matthewdeanmartin/urllib_gui)
+- [PyPI](https://pypi.org/project/urllib-gui/)
+- [Documentation](https://urllib_gui.readthedocs.io/en/latest/)
+- [Bug Tracker](https://github.com/matthewdeanmartin/urllib_gui/issues)
+- [Change Log](https://github.com/matthewdeanmartin/urllib_gui/blob/main/CHANGELOG.md)
