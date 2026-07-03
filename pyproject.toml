@@ -16,7 +16,10 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
 ]
-dependencies = [
+dependencies = []
+
+[project.optional-dependencies]
+all = [
     "do_i_need_to_upgrade>=0.0.1",
 ]
 

@@ -8,6 +8,7 @@ import pytest
 import urllib_gui
 from urllib_gui import app, cli
 from urllib_gui.__about__ import __version__
+from urllib_gui import upgrade_integration
 
 tkinter = pytest.importorskip("tkinter", reason="tkinter not available")
 
@@ -66,6 +67,19 @@ def test_main_dispatches_upgrade_subcommand(monkeypatch: MonkeyPatchLike) -> Non
 
     assert rc == 10
     assert captured == {"command": "upgrade"}
+
+
+def test_missing_upgrade_extra_quietly_skips(monkeypatch: MonkeyPatchLike) -> None:
+    """Without the optional extra, update support should quietly disable itself."""
+    monkeypatch.setattr(upgrade_integration, "HAS_UPGRADE_SUPPORT", False)
+
+    parser = cli.build_update_parser()
+
+    assert upgrade_integration.should_handle_upgrade_command(["upgrade"]) is False
+    assert parser.parse_args([]).command is None
+    assert upgrade_integration.startup_report() is None
+    assert upgrade_integration.exit_report() is None
+    assert upgrade_integration.run_command(parser.parse_args([])) == 0
 
 
 def test_app_run_prints_distinct_startup_and_exit_notices(

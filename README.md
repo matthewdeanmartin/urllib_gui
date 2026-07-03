@@ -35,6 +35,18 @@ With `pip`:
 pip install urllib_gui
 ```
 
+Install the optional update-checking integration too:
+
+```bash
+pip install "urllib_gui[all]"
+```
+
+With `pipx`:
+
+```bash
+pipx install "urllib_gui[all]"
+```
+
 ## Install from source
 
 ```bash
@@ -111,6 +123,19 @@ From the drawer you can:
 - preview the exact request before sending it
 
 The CLI only launches the GUI and optionally seeds the starting URL and theme. Request customization happens inside the desktop app.
+
+## Optional update checks
+
+`urllib_gui` can integrate with `do_i_need_to_upgrade`, but that support is intentionally optional so the base install stays lean.
+
+If installed with `urllib_gui[all]`:
+
+- the GUI quietly checks for updates on startup and shutdown
+- terminal notices can appear during normal app usage
+- `urllib_gui upgrade`
+- `urllib_gui check-updates`
+
+If the extra is not installed, `urllib_gui` still runs normally and simply skips the update-check feature.
 
 ## Response inspection
 
