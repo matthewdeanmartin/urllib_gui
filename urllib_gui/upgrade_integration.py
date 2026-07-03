@@ -3,24 +3,88 @@
 from __future__ import annotations
 
 import argparse
+import importlib
 import sys
 from collections.abc import Sequence
-from typing import Any
+from typing import Any, Literal, Protocol
+
+
+class Report(Protocol):
+    """Minimal report surface used by urllib_gui."""
+
+    is_empty: bool
+
+    def render_text(self, *, stream: Any) -> str: ...
+
+
+class Settings(Protocol):
+    """Minimal settings surface used by urllib_gui."""
+
+    def replace(self, *, allow_network: bool, notify: str) -> Settings: ...
+
+
+class SettingsFactory(Protocol):
+    """Callable protocol for constructing settings instances."""
+
+    def __call__(self, *, dist_name: str, position: str, notify: str) -> Settings: ...
+
+
+class AddCommand(Protocol):
+    """Callable protocol for registering an upgrade-related subcommand."""
+
+    def __call__(
+        self,
+        subparsers: argparse._SubParsersAction[Any],
+        dist_name: str,
+        *,
+        command: str = ...,
+        settings: Settings | None = ...,
+    ) -> None: ...
+
+
+class RunUpgradeCommand(Protocol):
+    """Callable protocol for dispatching an upgrade-related CLI command."""
+
+    def __call__(self, args: argparse.Namespace) -> int | None: ...
+
+
+class CheckForUpdates(Protocol):
+    """Callable protocol for reading or refreshing the upgrade report."""
+
+    def __call__(
+        self,
+        host: Any | None = ...,
+        position: Literal["start", "end", "both", "off"] = ...,
+        background: bool = ...,
+        force: bool = ...,
+        spawn: bool = ...,
+        settings: Settings | None = ...,
+    ) -> Report: ...
+
+
+add_check_command: AddCommand | None
+add_upgrade_command: AddCommand | None
+run_if_upgrade_command: RunUpgradeCommand | None
+check_for_updates: CheckForUpdates | None
+SettingsClass: SettingsFactory | None
 
 try:
-    from do_i_need_to_upgrade import add_check_command, add_upgrade_command, run_if_upgrade_command
-    from do_i_need_to_upgrade.api import check_for_updates
-    from do_i_need_to_upgrade.report import Report
-    from do_i_need_to_upgrade.settings import Settings
+    upgrade_module = importlib.import_module("do_i_need_to_upgrade")
+    upgrade_api_module = importlib.import_module("do_i_need_to_upgrade.api")
+    upgrade_settings_module = importlib.import_module("do_i_need_to_upgrade.settings")
 
+    add_check_command = getattr(upgrade_module, "add_check_command")
+    add_upgrade_command = getattr(upgrade_module, "add_upgrade_command")
+    run_if_upgrade_command = getattr(upgrade_module, "run_if_upgrade_command")
+    check_for_updates = getattr(upgrade_api_module, "check_for_updates")
+    SettingsClass = getattr(upgrade_settings_module, "Settings")
     HAS_UPGRADE_SUPPORT = True
 except ImportError:
     add_check_command = None
     add_upgrade_command = None
     run_if_upgrade_command = None
     check_for_updates = None
-    Report = Any
-    Settings = Any
+    SettingsClass = None
     HAS_UPGRADE_SUPPORT = False
 
 DIST_NAME = "urllib_gui"
@@ -31,7 +95,8 @@ UPGRADE_COMMANDS = frozenset({CHECK_UPDATES_COMMAND, UPGRADE_COMMAND})
 
 def settings() -> Settings:
     """Return urllib_gui's embedded update-check settings."""
-    return Settings(dist_name=DIST_NAME, position="start", notify="return-only")
+    assert SettingsClass is not None
+    return SettingsClass(dist_name=DIST_NAME, position="start", notify="return-only")
 
 
 def should_handle_upgrade_command(argv: Sequence[str]) -> bool:
