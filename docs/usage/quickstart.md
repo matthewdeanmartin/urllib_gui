@@ -17,8 +17,8 @@ urllib_gui https://example.com
 The main window starts with a location bar and an empty tab.
 
 1. Type a URL or local path.
-2. Press Enter or click **Go**.
-3. Use **Back**, **Forward**, or **Reload** as needed.
+1. Press Enter or click **Go**.
+1. Use **Back**, **Forward**, or **Reload** as needed.
 
 If you type a local filesystem path and it exists, the app turns it into a `file:` URL automatically.
 

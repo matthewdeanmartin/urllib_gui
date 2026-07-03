@@ -18,7 +18,7 @@ __version__ = "0.1.0"
 __description__ = "A gui for urllib. Something between curl and postman and a browser. Almost all stdlib"
 __readme__ = "README.md"
 __credits__ = [{"name": "Matthew Martin", "email": "matthewdeanmartin@gmail.com"}]
-__dependencies__: list[str] = []
+__dependencies__ = ["do_i_need_to_upgrade>=0.0.1"]
 __keywords__ = ["urllib_gui"]
 __license__ = "MIT"
 __requires_python__ = ">=3.13"

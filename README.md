@@ -88,9 +88,9 @@ python -m urllib_gui https://example.com
 ## Basic browsing
 
 1. Start the app and type a URL into the location bar.
-2. Press Enter or click **Go**.
-3. Use **Back**, **Forward**, and **Reload** as you would in a simple browser.
-4. Open local files with **File -> Open File**.
+1. Press Enter or click **Go**.
+1. Use **Back**, **Forward**, and **Reload** as you would in a simple browser.
+1. Open local files with **File -> Open File**.
 
 Supported schemes are currently limited to `http`, `https`, and `file`.
 

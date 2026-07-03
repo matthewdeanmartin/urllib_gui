@@ -6,7 +6,7 @@ from typing import Protocol
 import pytest
 
 import urllib_gui
-from urllib_gui import cli
+from urllib_gui import app, cli
 from urllib_gui.__about__ import __version__
 
 tkinter = pytest.importorskip("tkinter", reason="tkinter not available")
@@ -45,6 +45,57 @@ def test_main_launches_app(monkeypatch: MonkeyPatchLike) -> None:
         captured["theme"] = theme
 
     monkeypatch.setattr(cli, "run", fake_run)
-    cli.main(["https://example.com", "--theme", "dark"])
+    rc = cli.main(["https://example.com", "--theme", "dark"])
 
+    assert rc == 0
     assert captured == {"initial_url": "https://example.com", "theme": "dark"}
+
+
+def test_main_dispatches_upgrade_subcommand(monkeypatch: MonkeyPatchLike) -> None:
+    """CLI should route update subcommands through the integrated dispatcher."""
+    captured: dict[str, str] = {}
+
+    def fake_run_command(args: object) -> int:
+        command = getattr(args, "command", "")
+        captured["command"] = str(command)
+        return 10
+
+    monkeypatch.setattr(cli, "run_command", fake_run_command)
+
+    rc = cli.main(["upgrade", "--check"])
+
+    assert rc == 10
+    assert captured == {"command": "upgrade"}
+
+
+def test_app_run_prints_distinct_startup_and_exit_notices(
+    monkeypatch: MonkeyPatchLike, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The GUI lifecycle should surface update notices at startup and shutdown."""
+    startup_marker = object()
+    exit_marker = object()
+
+    class FakeWindow:
+        """Minimal stand-in for the Tkinter main window."""
+
+        def __init__(self, *, initial_url: str | None = None, theme: str = "light") -> None:
+            del initial_url, theme
+
+        def mainloop(self) -> None:
+            """Pretend the GUI ran and then closed."""
+
+    def fake_render_notice(report: object | None) -> str:
+        if report is startup_marker:
+            return "startup notice"
+        if report is exit_marker:
+            return "exit notice"
+        return ""
+
+    monkeypatch.setattr(app, "MainWindow", FakeWindow)
+    monkeypatch.setattr(app, "startup_report", lambda: startup_marker)
+    monkeypatch.setattr(app, "exit_report", lambda: exit_marker)
+    monkeypatch.setattr(app, "render_notice", fake_render_notice)
+
+    app.run()
+
+    assert capsys.readouterr().err == "startup notice\nexit notice\n"
