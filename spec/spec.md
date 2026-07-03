@@ -12,7 +12,7 @@ The primary interface is a tabbed text viewer with clickable links, a powerful r
 
 `urllib_gui` should feel like what might plausibly exist in the Python standard library if Tkinter, `urllib`, `html.parser`, `webbrowser`, and `configparser` had been composed into a small but useful hypertext utility.
 
----
+______________________________________________________________________
 
 # 2. Design Philosophy
 
@@ -84,7 +84,7 @@ The viewer should not attempt browser layout.
 
 HTML pages should be shown as extracted text with optional hyperlinks. The app should make the rendering engine visible and switchable.
 
----
+______________________________________________________________________
 
 # 3. Goals
 
@@ -93,32 +93,32 @@ HTML pages should be shown as extracted text with optional hyperlinks. The app s
 `urllib_gui` should provide:
 
 1. A Tkinter GUI for making HTTP/HTTPS/file requests through `urllib`.
-2. A tabbed interface for multiple pages or requests.
-3. A location bar with request options beyond a normal browser address bar.
-4. Plain-text and HTML-to-text viewing.
-5. Clickable links in the text viewer when possible.
-6. Request/response inspection.
-7. History.
-8. Bookmarks.
-9. Basic theming.
-10. A plugin interface for alternate HTML-to-text engines.
+1. A tabbed interface for multiple pages or requests.
+1. A location bar with request options beyond a normal browser address bar.
+1. Plain-text and HTML-to-text viewing.
+1. Clickable links in the text viewer when possible.
+1. Request/response inspection.
+1. History.
+1. Bookmarks.
+1. Basic theming.
+1. A plugin interface for alternate HTML-to-text engines.
 
 ## 3.2 Secondary goals
 
 The app should also support:
 
 1. Saving responses to disk.
-2. Copying request as Python `urllib` code.
-3. Copying request as `curl`, where reasonable.
-4. Viewing headers.
-5. Viewing source.
-6. Opening links externally in the system browser.
-7. Basic cookie handling.
-8. Basic proxy configuration.
-9. Basic authentication helpers.
-10. Import/export bookmarks.
+1. Copying request as Python `urllib` code.
+1. Copying request as `curl`, where reasonable.
+1. Viewing headers.
+1. Viewing source.
+1. Opening links externally in the system browser.
+1. Basic cookie handling.
+1. Basic proxy configuration.
+1. Basic authentication helpers.
+1. Import/export bookmarks.
 
----
+______________________________________________________________________
 
 # 4. Non-goals
 
@@ -143,7 +143,7 @@ modern web-app compatibility
 
 It is not intended to replace Firefox, Chrome, Safari, Edge, Qt WebEngine, CEF, Playwright, or pywebview.
 
----
+______________________________________________________________________
 
 # 5. Target Users
 
@@ -163,7 +163,7 @@ Users who want to read simple pages, documentation, source pages, old-school sit
 
 People teaching or learning HTTP, URLs, headers, encodings, cookies, and `urllib`.
 
----
+______________________________________________________________________
 
 # 6. Application Model
 
@@ -233,7 +233,7 @@ RenderedDocument
 Tkinter Text widget
 ```
 
----
+______________________________________________________________________
 
 # 7. User Interface
 
@@ -312,7 +312,7 @@ Help
   About urllib_gui
 ```
 
----
+______________________________________________________________________
 
 # 8. Location Bar on Steroids
 
@@ -452,7 +452,7 @@ Accept: text/html,text/plain,*/*
 
 This is informational only. Exact wire representation is still delegated to `urllib`.
 
----
+______________________________________________________________________
 
 # 9. Viewer
 
@@ -541,7 +541,7 @@ Size: 2.4 MB
 [ Open Externally ]
 ```
 
----
+______________________________________________________________________
 
 # 10. HTML-to-Text Engines
 
@@ -648,7 +648,7 @@ Render as:
 
 Changing the engine should re-render the current response without re-fetching unless requested.
 
----
+______________________________________________________________________
 
 # 11. Standard-Library HTML Renderer
 
@@ -815,7 +815,7 @@ Example:
 
 Actual form submission belongs to the roadmap.
 
----
+______________________________________________________________________
 
 # 12. Networking Layer
 
@@ -958,7 +958,7 @@ Bearer tokens can simply add:
 Authorization: Bearer <token>
 ```
 
----
+______________________________________________________________________
 
 # 13. Tabs
 
@@ -996,7 +996,7 @@ Each tab should maintain its own navigation history.
 
 Global history is separate.
 
----
+______________________________________________________________________
 
 # 14. History
 
@@ -1049,7 +1049,7 @@ delete entry
 clear all
 ```
 
----
+______________________________________________________________________
 
 # 15. Bookmarks
 
@@ -1108,7 +1108,7 @@ Optional bookmark toolbar:
 [ Python docs ] [ Localhost ] [ RFCs ] [ Project docs ]
 ```
 
----
+______________________________________________________________________
 
 # 16. Request Scratchpad
 
@@ -1147,7 +1147,7 @@ class SavedRequest:
     tags: list[str]
 ```
 
----
+______________________________________________________________________
 
 # 17. Theming
 
@@ -1195,7 +1195,7 @@ link_foreground = #6ab0ff
 visited_link_foreground = #b48cff
 ```
 
----
+______________________________________________________________________
 
 # 18. Configuration
 
@@ -1241,7 +1241,7 @@ font_size = 12
 open_links_in_new_tab = false
 ```
 
----
+______________________________________________________________________
 
 # 19. Generated Code Export
 
@@ -1290,7 +1290,7 @@ curl \
 
 This should be best-effort, not exact feature parity.
 
----
+______________________________________________________________________
 
 # 20. Error Handling
 
@@ -1355,7 +1355,7 @@ Fallback decode strategy:
 
 The selected encoding should be visible and overrideable.
 
----
+______________________________________________________________________
 
 # 21. Security Model
 
@@ -1414,7 +1414,7 @@ custom application schemes
 
 Disabling TLS verification should show a visible warning in the request panel and status bar.
 
----
+______________________________________________________________________
 
 # 22. Accessibility
 
@@ -1448,7 +1448,7 @@ Ctrl+0        reset zoom
 
 On macOS, use Command equivalents where reasonable.
 
----
+______________________________________________________________________
 
 # 23. Package Structure
 
@@ -1507,7 +1507,7 @@ Optional console script:
 urllib-gui
 ```
 
----
+______________________________________________________________________
 
 # 24. Public API
 
@@ -1549,7 +1549,7 @@ client = UrllibClient()
 response = client.fetch(RequestSpec(url="https://example.com"))
 ```
 
----
+______________________________________________________________________
 
 # 25. Plugin System
 
@@ -1581,7 +1581,7 @@ If an optional renderer is unavailable, it should simply not appear in the rende
 
 No noisy import errors.
 
----
+______________________________________________________________________
 
 # 26. Roadmap
 
@@ -1679,7 +1679,7 @@ CSS styling
 dynamic DOM mutation
 ```
 
----
+______________________________________________________________________
 
 # 27. Form Posting Roadmap
 
@@ -1720,7 +1720,7 @@ Submitting the form creates a new `RequestSpec`.
 
 This keeps forms aligned with the app’s core model.
 
----
+______________________________________________________________________
 
 # 28. Testing Strategy
 
@@ -1781,35 +1781,35 @@ switch render engine
 
 Tkinter GUI tests should be limited and pragmatic.
 
----
+______________________________________________________________________
 
 # 29. Example User Flows
 
 ## 29.1 Read a simple web page
 
 1. User enters `example.com`.
-2. App normalizes to `https://example.com`.
-3. App performs a `GET`.
-4. HTML is decoded.
-5. `stdlib_html_links` renders text.
-6. Links are clickable in the text widget.
-7. History records the visit.
+1. App normalizes to `https://example.com`.
+1. App performs a `GET`.
+1. HTML is decoded.
+1. `stdlib_html_links` renders text.
+1. Links are clickable in the text widget.
+1. History records the visit.
 
 ## 29.2 Inspect an API response
 
 1. User opens expanded request panel.
-2. User selects `GET`.
-3. User adds header `Accept: application/json`.
-4. User enters URL.
-5. Response is displayed as plain text.
-6. Headers are available in the headers view.
-7. User copies request as `urllib` code.
+1. User selects `GET`.
+1. User adds header `Accept: application/json`.
+1. User enters URL.
+1. Response is displayed as plain text.
+1. Headers are available in the headers view.
+1. User copies request as `urllib` code.
 
 ## 29.3 POST JSON
 
 1. User selects `POST`.
-2. User sets body type to `JSON`.
-3. User enters:
+1. User sets body type to `JSON`.
+1. User enters:
 
 ```json
 {"name": "Matt"}
@@ -1822,17 +1822,17 @@ Content-Type: application/json
 ```
 
 5. Request is sent through `urllib`.
-6. Response is shown.
+1. Response is shown.
 
 ## 29.4 Follow links text-first
 
 1. User opens a documentation page.
-2. Text is displayed without layout noise.
-3. Links appear blue and underlined.
-4. User Ctrl-clicks a link.
-5. New tab opens with resolved absolute URL.
+1. Text is displayed without layout noise.
+1. Links appear blue and underlined.
+1. User Ctrl-clicks a link.
+1. New tab opens with resolved absolute URL.
 
----
+______________________________________________________________________
 
 # 30. MVP Acceptance Criteria
 
@@ -1855,7 +1855,7 @@ The user can copy the current request as Python urllib code.
 The app has no required non-stdlib dependencies.
 ```
 
----
+______________________________________________________________________
 
 # 31. Naming
 
@@ -1889,7 +1889,7 @@ Alternative tagline:
 The missing GUI for urllib.request.
 ```
 
----
+______________________________________________________________________
 
 # 32. Guiding Constraints
 
@@ -1905,7 +1905,7 @@ Can this degrade gracefully?
 
 When the answer is no, the feature probably belongs outside the core.
 
----
+______________________________________________________________________
 
 # 33. One-Sentence Product Definition
 

@@ -1,14 +1,14 @@
 """Smoke tests for the CLI entry point."""
 
+import argparse
 import importlib
 from typing import Protocol
 
 import pytest
 
 import urllib_gui
-from urllib_gui import app, cli
+from urllib_gui import app, cli, upgrade_integration
 from urllib_gui.__about__ import __version__
-from urllib_gui import upgrade_integration
 
 tkinter = pytest.importorskip("tkinter", reason="tkinter not available")
 
@@ -18,6 +18,13 @@ class MonkeyPatchLike(Protocol):
 
     def setattr(self, target: object, name: str, value: object) -> None:
         """Set an attribute during the test."""
+
+
+class SubparsersLike(Protocol):
+    """Minimal protocol for the subparser collection used in tests."""
+
+    def add_parser(self, name: str) -> argparse.ArgumentParser:
+        """Add and return a named subparser."""
 
 
 def test_import() -> None:
@@ -56,11 +63,17 @@ def test_main_dispatches_upgrade_subcommand(monkeypatch: MonkeyPatchLike) -> Non
     """CLI should route update subcommands through the integrated dispatcher."""
     captured: dict[str, str] = {}
 
+    def fake_add_commands(subparsers: SubparsersLike) -> None:
+        command_subparsers = subparsers.add_parser("upgrade")
+        command_subparsers.add_argument("--check", action="store_true")
+
     def fake_run_command(args: object) -> int:
         command = getattr(args, "command", "")
         captured["command"] = str(command)
         return 10
 
+    monkeypatch.setattr(cli, "should_handle_upgrade_command", lambda argv: True)
+    monkeypatch.setattr(cli, "add_commands", fake_add_commands)
     monkeypatch.setattr(cli, "run_command", fake_run_command)
 
     rc = cli.main(["upgrade", "--check"])

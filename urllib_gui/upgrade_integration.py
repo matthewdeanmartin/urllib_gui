@@ -73,11 +73,11 @@ try:
     upgrade_api_module = importlib.import_module("do_i_need_to_upgrade.api")
     upgrade_settings_module = importlib.import_module("do_i_need_to_upgrade.settings")
 
-    add_check_command = getattr(upgrade_module, "add_check_command")
-    add_upgrade_command = getattr(upgrade_module, "add_upgrade_command")
-    run_if_upgrade_command = getattr(upgrade_module, "run_if_upgrade_command")
-    check_for_updates = getattr(upgrade_api_module, "check_for_updates")
-    SettingsClass = getattr(upgrade_settings_module, "Settings")
+    add_check_command = upgrade_module.add_check_command
+    add_upgrade_command = upgrade_module.add_upgrade_command
+    run_if_upgrade_command = upgrade_module.run_if_upgrade_command
+    check_for_updates = upgrade_api_module.check_for_updates
+    SettingsClass = upgrade_settings_module.Settings
     HAS_UPGRADE_SUPPORT = True
 except ImportError:
     add_check_command = None
