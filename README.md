@@ -215,3 +215,7 @@ See [CHANGELOG.md](https://github.com/matthewdeanmartin/urllib_gui/blob/main/CHA
 - [Documentation](https://urllib_gui.readthedocs.io/en/latest/)
 - [Bug Tracker](https://github.com/matthewdeanmartin/urllib_gui/issues)
 - [Change Log](https://github.com/matthewdeanmartin/urllib_gui/blob/main/CHANGELOG.md)
+
+## Python 3.15 wheels-only verification — 2026-10-04
+
+Windows Python 3.15.0rc3 passes 12 tests with minimal wheel-installed test tools; Python 3.14 and prerelease-enabled resolution match. Installed-wheel imports and CLI help work outside the checkout. The core remains dependency-free. Broad developer tooling still encounters the separate PyYAML wheel blocker; no new runtime fallback was needed.
