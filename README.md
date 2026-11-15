@@ -57,7 +57,7 @@ uv sync --all-extras
 
 ## Requirements
 
-- Python 3.13 or newer
+- Python 3.12 or newer
 - A working Tkinter desktop environment
 - Network access for `http` and `https` requests
 
@@ -210,12 +210,9 @@ See [CHANGELOG.md](https://github.com/matthewdeanmartin/urllib_gui/blob/main/CHA
 
 ## Project Links
 
+- [Homepage](https://matthewdeanmartin.github.io/urllib_gui/)
 - [GitHub](https://github.com/matthewdeanmartin/urllib_gui)
 - [PyPI](https://pypi.org/project/urllib-gui/)
-- [Documentation](https://urllib_gui.readthedocs.io/en/latest/)
+- [Documentation](https://urllib-gui.readthedocs.io/en/latest/)
 - [Bug Tracker](https://github.com/matthewdeanmartin/urllib_gui/issues)
 - [Change Log](https://github.com/matthewdeanmartin/urllib_gui/blob/main/CHANGELOG.md)
-
-## Python 3.15 wheels-only verification — 2026-10-04
-
-Windows Python 3.15.0rc3 passes 12 tests with minimal wheel-installed test tools; Python 3.14 and prerelease-enabled resolution match. Installed-wheel imports and CLI help work outside the checkout. The core remains dependency-free. Broad developer tooling still encounters the separate PyYAML wheel blocker; no new runtime fallback was needed.

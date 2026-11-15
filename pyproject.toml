@@ -27,9 +27,9 @@ all = [
 
 [project.urls]
 Repository = "https://github.com/matthewdeanmartin/urllib_gui"
-Documentation = "https://urllib_gui.readthedocs.io/en/latest/"
+Documentation = "https://urllib-gui.readthedocs.io/en/latest/"
 Changelog = "https://github.com/matthewdeanmartin/urllib_gui/blob/main/CHANGELOG.md"
-homepage = "https://github.com/matthewdeanmartin/urllib_gui"
+Homepage = "https://matthewdeanmartin.github.io/urllib_gui/"
 issues = "https://github.com/matthewdeanmartin/urllib_gui/issues/"
 
 [project.scripts]

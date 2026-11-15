@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="{{ site.Params.description }}">
+  <meta name="theme-color" content="#101b2a">
+  <link rel="canonical" href="{{ .Permalink }}">
+  <link rel="stylesheet" href="{{ "css/site.css" | relURL }}">
+  <title>{{ site.Title }}</title>
+</head>
+<body>
+  <div class="site-shell">
+    <header class="topbar">
+      <a class="brand" href="{{ .RelPermalink }}" aria-label="urllib_gui home"><span class="brand-mark">u<span>_</span></span><span>urllib_gui</span></a>
+      <nav aria-label="Main navigation">
+        <a href="#workflow">Workflow</a>
+        <a href="#features">Features</a>
+        <a href="#install">Install</a>
+        <a href="https://urllib-gui.readthedocs.io/en/latest/">Docs ↗</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <div class="eyebrow"><span class="signal"></span> SMALL TOOL · CLEAR REQUESTS</div>
+          <h1 id="hero-title">Meet the web<br><em>at request level.</em></h1>
+          <p class="hero-lede">A desktop client for opening URLs, shaping HTTP requests, and understanding the response. Built with Tkinter and Python’s standard-library <code>urllib</code>.</p>
+          <div class="hero-actions">
+            <a class="button button-primary" href="#install">Get started <span aria-hidden="true">↗</span></a>
+            <a class="button button-secondary" href="https://github.com/matthewdeanmartin/urllib_gui">View on GitHub <span aria-hidden="true">↗</span></a>
+          </div>
+          <p class="hero-aside">A lightweight request inspector and text-first browser, with a base install that has no third-party runtime dependencies.</p>
+        </div>
+
+        <div class="app-frame" role="img" aria-label="Illustration of a URL request in urllib_gui, showing request controls and response views">
+          <div class="window-bar"><div class="window-dots"><i></i><i></i><i></i></div><span>urllib_gui / request workspace</span><span class="window-status">● READY</span></div>
+          <div class="address-row"><span class="method">GET</span><span class="address">https://example.com/api/items</span><span class="go">GO →</span></div>
+          <div class="app-body">
+            <div class="request-pane"><span class="pane-label">01 / REQUEST</span><div class="pane-heading">Make it yours.</div><div class="field"><small>METHOD</small><strong>GET <b>⌄</b></strong></div><div class="field"><small>HEADERS</small><strong>Accept: application/json</strong></div><div class="field"><small>TIMEOUT</small><strong>30 seconds</strong></div><div class="field"><small>PROXY</small><strong>Use environment</strong></div><div class="request-preview">⌁ &nbsp; Preview before sending</div></div>
+            <div class="response-pane"><div class="response-tabs"><span class="active">Rendered</span><span>Source</span><span>Headers</span><span>Request</span></div><div class="response-meta"><span class="status-code">200 OK</span><span>text/html</span><span>126 ms</span></div><div class="response-content"><span class="response-kicker">RESPONSE</span><h2>Everything in view.</h2><p>Read the page, inspect the source, and see what came back from the server.</p><div class="response-lines"><span></span><span></span><span></span></div></div></div>
+          </div>
+          <div class="app-footer"><span>↳ Local workspace</span><span>urllib · Tkinter · your machine</span></div>
+        </div>
+      </section>
+
+      <section class="workflow section" id="workflow" aria-labelledby="workflow-title"><div class="section-intro"><span class="section-index">01 / THE WORKFLOW</span><h2 id="workflow-title">From URL to answer,<br>without leaving the window.</h2><p>Move from browsing to request debugging in one compact workspace.</p></div><div class="step-grid"><article><span>01</span><h3>Open</h3><p>Visit an HTTP, HTTPS, or local file URL. Follow extracted links and keep several pages in tabs.</p></article><article><span>02</span><h3>Adjust</h3><p>Set method, headers, body, auth, cookies, proxy, redirects, and TLS options in the request drawer.</p></article><article><span>03</span><h3>Inspect</h3><p>Switch among rendered text, response source, headers, and the exact request you sent.</p></article><article><span>04</span><h3>Keep</h3><p>Save request templates, export a response, or copy a best-effort curl command or Python snippet.</p></article></div></section>
+
+      <section class="features section" id="features" aria-labelledby="features-title"><div class="section-intro"><span class="section-index">02 / USEFUL DETAILS</span><h2 id="features-title">Room to explore.<br>Enough control to learn.</h2></div><div class="feature-grid"><article><span class="feature-icon">⌘</span><h3>Request control</h3><p>Try custom methods and bodies, choose proxy and auth settings, and preview the request before it goes out.</p></article><article><span class="feature-icon">▣</span><h3>Response views</h3><p>Read HTML as text, inspect the raw source, and examine headers without switching tools.</p></article><article><span class="feature-icon">◇</span><h3>Local memory</h3><p>Keep browsing history, bookmarks, saved requests, preferences, and a cookie jar on your machine.</p></article></div><div class="limit-note"><strong>What it is:</strong> a text-first desktop client. <strong>What it does not do:</strong> execute JavaScript, render a full browser DOM, or provide headless automation.</div></section>
+
+      <section class="install section" id="install" aria-labelledby="install-title"><div><span class="section-index">03 / START HERE</span><h2 id="install-title">Install. Open. Inspect.</h2><p>Install from PyPI, then launch the desktop app. A working Tkinter environment is required.</p><div class="install-links"><a href="https://urllib-gui.readthedocs.io/en/latest/">Read the guide ↗</a><a href="https://pypi.org/project/urllib-gui/">See the PyPI package ↗</a></div></div><div class="terminal"><div class="terminal-label">TERMINAL</div><code><span>$</span> pipx install urllib_gui</code><code><span>$</span> urllib_gui https://example.com</code></div></section>
+    </main>
+    <footer><span>urllib_gui · MIT licensed</span><div><a href="https://github.com/matthewdeanmartin/urllib_gui">Source</a><a href="https://urllib-gui.readthedocs.io/en/latest/">Documentation</a><a href="https://pypi.org/project/urllib-gui/">PyPI</a></div></footer>
+  </div>
+</body>
+</html>

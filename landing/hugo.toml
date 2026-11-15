@@ -1,0 +1,15 @@
+baseURL = 'https://matthewdeanmartin.github.io/urllib_gui/'
+locale = 'en-US'
+title = 'urllib_gui — a desktop request inspector'
+enableRobotsTXT = true
+disableKinds = ['taxonomy', 'term', 'RSS']
+
+[params]
+description = 'Explore URLs, tune HTTP requests, and inspect responses in a small desktop client built on Python urllib and Tkinter.'
+
+[sitemap]
+changefreq = 'monthly'
+priority = 1.0
+
+[minify]
+minifyOutput = true

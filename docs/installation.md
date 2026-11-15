@@ -2,7 +2,7 @@
 
 ## Requirements
 
-- Python 3.13 or newer
+- Python 3.12 or newer
 - Tkinter support in your Python install
 - A desktop environment capable of opening Tk windows
 
